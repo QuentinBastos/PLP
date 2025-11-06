@@ -29,5 +29,30 @@ int main(void)
             }
         }
     }
+    printf("\n");
+
+    int i = 0;
+    while (i < n)
+    {
+        int j = 0;
+        while (j < i + 1)
+        {
+            if (i == j)
+            {
+                printf("*");
+                printf("\n");
+            }
+            else if (j == 0 || i == n - 1)
+            {
+                printf("*");
+            }
+            else
+            {
+                printf("#");
+            }
+            j++;
+        }
+        i++;
+    }
     return 0;
 }
