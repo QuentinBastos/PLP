@@ -163,6 +163,11 @@ Exemple pour taille = 5 :
 
 5. Testez avec différentes tailles pour vérifier que les caractères alternent correctement et que la taille est correcte.
 
+```bash
+$ gcc -o boucles boucles.c
+$ ./boucles
+```
+
 ---
 
 ## Exercice 1.7 [★★]
