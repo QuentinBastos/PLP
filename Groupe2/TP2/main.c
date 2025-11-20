@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "sphere.h"
+#include "src/sphere.h"
 
 int main() {
     float rayon = 5.0;
