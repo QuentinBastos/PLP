@@ -1,3 +1,10 @@
+/*
+ * Nom du fichier : main.c
+ * Objectif : Programme principal pour tester les fonctions de calcul de sphère.
+ * Auteurs : Adrian RABIAN, Quentin BASTOS
+ * Lignes importantes : 2, 6, 7
+ * Commande pour exécuter le fichier : gcc main.c surface.c volume.c -o sphere -lm && ./sphere
+ */
 #include <stdio.h>
 #include "sphere.h"
 

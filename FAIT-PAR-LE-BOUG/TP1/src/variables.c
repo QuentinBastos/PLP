@@ -1,3 +1,10 @@
+/*
+ * Nom du fichier : variables.c
+ * Objectif : Déclarer et afficher des variables de différents types.
+ * Auteurs : Adrian RABIAN, Quentin BASTOS
+ * Lignes importantes : 5, 21
+ * Commande pour exécuter le fichier : gcc variables.c -o variables && ./variables
+ */
 #include <stdio.h>
 
 int main() {

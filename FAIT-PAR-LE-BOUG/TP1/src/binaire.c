@@ -1,3 +1,10 @@
+/*
+ * Nom du fichier : binaire.c
+ * Objectif : Convertir et afficher un nombre entier en binaire.
+ * Auteurs : Adrian RABIAN, Quentin BASTOS
+ * Lignes importantes : 7, 25, 31
+ * Commande pour exécuter le fichier : gcc binaire.c -o binaire && ./binaire
+ */
 #include <stdio.h>
 
 // Méthode simplifiée pour afficher un nombre en binaire

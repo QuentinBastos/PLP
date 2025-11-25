@@ -1,3 +1,10 @@
+/*
+ * Nom du fichier : boucles.c
+ * Objectif : Afficher un triangle avec des boucles for, while et do...while.
+ * Auteurs : Adrian RABIAN, Quentin BASTOS
+ * Lignes importantes : 20, 40, 63
+ * Commande pour exécuter le fichier : gcc boucles.c -o boucles && ./boucles
+ */
 #include <stdio.h>
 
 int main()

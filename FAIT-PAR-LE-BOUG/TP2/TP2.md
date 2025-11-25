@@ -1,736 +1,294 @@
-Année: 2024-2025
-----------------
+# Travaux pratiques 2
 
-### Travaux pratiques 2
+## Année: 2025-2026
 
 ## Objectifs
 
-1. **Débogage :** Apprendre à utiliser les outils de débogage (`gdb` pour C et `pdb` pour Python) pour identifier et corriger les erreurs dans les programmes.
+1. **Débogage :** Apprendre à utiliser les outils de débogage (`gdb`) pour identifier et corriger les erreurs dans les programmes en C.
 
 2. **Chaîne de compilation :** Comprendre le processus complet de compilation en C avec `gcc`, y compris les étapes de prétraitement, compilation, assemblage et édition des liens.
 
-3. **Inspection de code :** Utiliser `dis` en Python pour inspecter le bytecode et comprendre comment le code source est transformé en instructions exécutables.
+3. **Manipulation de chaînes de caractères :** Maîtriser les techniques de manipulation de chaînes de caractères en C, incluant les opérations de recherche, découpage, et concaténation.
 
-4. **Manipulation de chaînes de caractères :** Maîtriser les techniques de manipulation de chaînes de caractères en C et en Python, incluant les opérations de recherche, découpage, formatage et gestion des encodages.
+4. **Gestion des données et recherche de phrases :** Utiliser les structures en C pour gérer des informations (comme les données d’étudiant.e.s) et implémenter des techniques pour rechercher des phrases spécifiques dans des fichiers.
 
-5. **Gestion des données et recherche de phrases :** Comparer la gestion des structures de données en C (structures) et en Python (classes) pour la gestion d'informations comme les données d’étudiant.e.s, et implémenter des techniques pour rechercher des phrases spécifiques dans des fichiers en utilisant C et Python.
+---
 
-
-## Exercice 2.1 [★]
-
-### GDB (C) 
+## Exercice 2.1 [★] – Débogage avec GDB
 
 Cet exercice présente une brève introduction à `gdb` et explique comment déboguer votre programme C à l'aide de `gdb`.
 
-Le code suivant (**erreurs.c**) présente une erreur majeure : il tente d'accéder à des indices de tableau supérieurs à la taille maximale du tableau (100). 
+Le code suivant (**erreurs.c**) présente une erreur majeure : il tente d'accéder à des indices de tableau supérieurs à la taille maximale du tableau (100).
 
-#### Exemple (erreurs.c)
+### Exemple (erreurs.c)
 
-```
+```c
 #include <stdio.h>
 
 int main() {
-
    int tableau[100];
 
    for (int compteur = 0; compteur < sizeof(tableau); compteur++) { //Erreur
        tableau[compteur] = tableau[compteur] * 2;
    }
    
-   return (0);
-
+   return 0;
 }
 ```
 
-Pour la compilation et la création d'un exécutable
+#### Compilation et exécution
 
-```
+1. Compilation simple :
+
+```bash
 $ gcc erreurs.c
 ```
 
-Lorsque nous exécutons le code, nous obtenons l'erreur suivante et le programme se plante (comme prévu).
+2. Exécution :
 
-```
+```bash
 ./a.out 
 *** stack smashing detected ***: terminated
-fish: Job 1, './a.out' terminated by signal SIGABRT (Abort)
 ```
 
-Pour déboguer ce code et trouver la source de l'erreur, nous devrons d'abord le compiler et ajouter des informations supplémentaires pour le débogage avec l'option `-ggdb3`.
+Le programme se plante comme prévu.
 
-```
-$ gcc -ggdb3 erreurs.c
-```
+#### Débogage avec GDB
 
-Nous allons maintenant exécuter le code avec gdb.
+1. Compiler avec informations de débogage :
 
-
-```
-$ gdb a.out
-GNU gdb (Ubuntu 12.0.90-0ubuntu1) 12.0.90
-Copyright (C) 2022 Free Software Foundation, Inc.
-License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
-This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
-Type "show copying" and "show warranty" for details.
-This GDB was configured as "x86_64-linux-gnu".
-Type "show configuration" for configuration details.
-For bug reporting instructions, please see:
-<https://www.gnu.org/software/gdb/bugs/>.
-Find the GDB manual and other documentation resources online at:
-    <http://www.gnu.org/software/gdb/documentation/>.
-
-For help, type "help".
-Type "apropos word" to search for commands related to "word"...
-Reading symbols from a.out...
-(gdb)
+```bash
+$ gcc -ggdb3 erreurs.c -o erreurs
 ```
 
-Une fois que vous exécutez gdb, vous verrez une autre ligne de commande avec `(gdb)`.
+2. Lancer GDB :
 
-Tapez `r` pour exécuter le programme.
-
+```bash
+$ gdb erreurs
 ```
+
+Vous verrez l’invite `(gdb)`.
+
+3. Exécuter le programme :
+
+```gdb
 (gdb) r
-Starting program: ./ProgC/gdb/a.out 
-[Thread debugging using libthread_db enabled]
-Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
-*** stack smashing detected ***: terminated
-
-Program received signal SIGABRT, Aborted.
-__pthread_kill_implementation (no_tid=0, signo=6, threadid=140737351481152) at ./nptl/pthread_kill.c:44
-44	./nptl/pthread_kill.c: No such file or directory.
 ```
 
-Le programme s'est écrasé et pour trouver la ligne qui est la raison de l'écrasement, tapez `bt`.
+Le programme s'arrête en cas d'erreur. Pour voir la pile d'appels :
 
-
-```
+```gdb
 (gdb) bt
-#0  __pthread_kill_implementation (no_tid=0, signo=6, threadid=140737351481152) at ./nptl/pthread_kill.c:44
-#1  __pthread_kill_internal (signo=6, threadid=140737351481152) at ./nptl/pthread_kill.c:78
-#2  __GI___pthread_kill (threadid=140737351481152, signo=signo@entry=6) at ./nptl/pthread_kill.c:89
-#3  0x00007ffff7dbc476 in __GI_raise (sig=sig@entry=6) at ../sysdeps/posix/raise.c:26
-#4  0x00007ffff7da27f3 in __GI_abort () at ./stdlib/abort.c:79
-#5  0x00007ffff7e036f6 in __libc_message (action=action@entry=do_abort, fmt=fmt@entry=0x7ffff7f55943 "*** %s ***: terminated\n")
-    at ../sysdeps/posix/libc_fatal.c:155
-#6  0x00007ffff7eb076a in __GI___fortify_fail (msg=msg@entry=0x7ffff7f5592b "stack smashing detected") at ./debug/fortify_fail.c:26
-#7  0x00007ffff7eb0736 in __stack_chk_fail () at ./debug/stack_chk_fail.c:24
-#8  0x00005555555551c1 in main () at erreurs.c:13
-(gdb) 
-
 ```
 
-On constate que l'erreur se situe à la ligne 13, à la fin de la fonction `main`. La prochaine étape consiste à ajouter un point d'arrêt (breakpoint) dans cette fonction, par exemple à la ligne où la variable `tableau` est affectée. 
+4. Placer un point d'arrêt à la ligne 10 :
 
-Pour arrêter le programme exactement à la ligne 8 (par exemple) du fichier `erreurs.c`, vous pouvez placer un point d'arrêt manuellement dans l'interface interactive de GDB.
-
-1. Pour placer un point d'arrêt à la ligne 8, entrez la commande suivante dans gdb :  
-   ```
-   (gdb) break erreurs.c:10
-   ```
-   
-2. Ensuite, exécutez le programme avec la commande :  
-   ```
-   (gdb) r
-   The program being debugged has been started already.
-   Start it from the beginning? (y or n) y
-
-   ```
-   Le programme s'exécutera jusqu'à atteindre le point d'arrêt défini.
-
-Cela vous permet d'examiner l'état du programme, notamment les valeurs des variables à ce moment précis, et de diagnostiquer plus facilement les erreurs éventuelles.
-
-Après avoir placé le point d'arrêt et que le programme s'est arrêté, vous pouvez :
-
-1. **Afficher la valeur actuelle des variables** :
-   - Pour la variable `tableau`, utilisez :
-     ```
-     print tableau
-     ```
-     ou
-     ```
-     p tableau
-     ```
-
-     Cela affichera la valeur de `tableau` (ou son pointeur).
-   
-   - Pour afficher les éléments du tableau, par exemple les 5 premiers, tapez :
-     ```
-     p tableau[0]@5
-     ```
-     Ceci affichera les 5 premiers éléments à partir de l'indice 0.
-
-2. **Utiliser la commande `n` (next)** :
-   - Après avoir inspecté les variables, vous pouvez avancer à l'instruction suivante sans entrer dans les fonctions appelées. Pour cela, tapez simplement :
-     ```
-     n
-     ```
-     La commande `n` exécute l'instruction courante et s'arrête à la suivante. Cela permet de progresser étape par étape dans le programme, tout en restant dans la fonction courante.
-
-3. **Continuer l'exécution** :
-   - Si vous voulez que le programme continue jusqu'au prochain point d'arrêt ou jusqu'à la fin, utilisez la commande :
-     ```
-     continue
-     ```
-
-Ainsi, vous pouvez inspecter les variables, avancer dans le programme à l'aide de `n`, et ajuster vos points d'arrêt si nécessaire.
-
-#### break
-
-L'objectif principal de l'utilisation de la commande `(gdb) break` est d'arrêter l'exécution d'un programme à un point précis afin de permettre l'inspection et la modification du contexte actuel avant de poursuivre son exécution. Cela facilite considérablement le débogage et l'analyse des programmes.
-
-##### Exemples d'utilisation de `break` dans GDB :
-
-- **Ajouter un point d'arrêt à une ligne spécifique** :  
-  Si vous souhaitez arrêter votre programme exactement à la ligne 10 du fichier `monprogramme.c`, vous pouvez définir un point d'arrêt en utilisant la commande suivante dans l'interface interactive GDB :
-  
-    ```
-    (gdb) break monprogramme.c:10
-    ```
-    Cela interrompra l'exécution du programme lorsqu'il atteindra la ligne 10.
-
-- **Ajouter un point d'arrêt à une fonction spécifique** :  
-  Si vous souhaitez arrêter l'exécution à chaque fois que le programme entre dans la fonction `ma_fonction`, vous pouvez définir un point d'arrêt avec la commande :
-  
-    ```
-    (gdb) break ma_fonction
-    ```
-    Le programme s'arrêtera à chaque fois que la fonction `ma_fonction` est appelée.
-
-##### Utilité des points d'arrêt
-
-La commande `break` est essentielle dans le processus de débogage avec GDB, car elle permet de geler l'exécution du programme à des moments clés. Cela vous donne l'opportunité d'inspecter les variables, de tester des hypothèses sur l'état du programme, et même de modifier certaines valeurs avant de poursuivre l'exécution. Cette intervention proactive vous aide à mieux comprendre les événements critiques qui surviennent dans votre programme.
-
-#### quit
-
-Pour quitter GDB, vous pouvez utiliser la commande suivante :
-
-```
-quit
+```gdb
+(gdb) break erreurs.c:10
 ```
 
-Si le programme en cours de débogage s'exécute encore, GDB vous demandera confirmation pour quitter. Il vous suffira de taper `y` (yes) ou d'appuyer sur Entrée pour confirmer et sortir de l'interface GDB.
+5. Exécuter jusqu’au point d’arrêt :
 
+```gdb
+(gdb) r
 ```
+
+6. Inspecter les variables :
+
+```gdb
+(gdb) p tableau
+(gdb) p tableau[0]@5
+```
+
+7. Avancer instruction par instruction :
+
+```gdb
+(gdb) n
+```
+
+8. Continuer l’exécution jusqu’au prochain point d’arrêt ou fin :
+
+```gdb
+(gdb) continue
+```
+
+9. Quitter GDB :
+
+```gdb
 (gdb) quit
-A debugging session is active.
-
-	Inferior 1 [process 3886] will be killed.
-
-Quit anyway? (y or n) y
 ```
 
-### PDB (Python)
+---
 
-L'objectif est d'apprendre à utiliser le débogueur Python pas à pas pour analyser et corriger une erreur dans le code.
+## Exercice 2.2 [★] – Chaîne de compilation en C
 
-#### Exemple 1 (erreurs1.py):
+### Étapes de la chaîne de compilation
 
-```python
-from typing import List
-import pdb
+1. **Préprocesseur :** Gère les directives `#include` et les macros.
+2. **Compilation :** Transforme le code en assembleur.
+3. **Assemblage :** Produit des fichiers objets `.o`.
+4. **Édition de liens :** Combine les objets et bibliothèques pour créer l’exécutable.
+5. **Exécution :** Lancer le programme binaire.
 
-def double_values(tableau: List[int]) -> None:
-    for compteur in range(len(tableau)):
-        # Introduire une erreur : parfois multiplier par 3 au lieu de 2
-        if compteur % 2 == 0:
-            tableau[compteur] *= 2
-        else:
-            tableau[compteur] *= 3
-        # Insérer un point d'arrêt pour observer la valeur de 'tableau' à chaque étape
-        pdb.set_trace()
-
-    return tableau
-
-# Créer un tableau d'exemple
-tableau: List[int] = [1, 2, 3, 4, 5]
-
-# Appeler la fonction et stocker le résultat
-resultat = double_values(tableau)
-
-# Afficher le résultat final
-print(resultat)
-```
-
-##### Instructions :
-1. Exécutez le programme.
-2. Lorsque le débogueur s'active (grâce à `pdb.set_trace()`), utilisez les commandes suivantes pour examiner l'état du programme :
-   - `n` pour passer à la ligne suivante.
-   - `p tableau` pour afficher le contenu du tableau à chaque étape.
-   - `p compteur` pour afficher la valeur actuelle du compteur.
-3. Essayez de comprendre pourquoi le tableau ne se comporte pas comme prévu (certains éléments sont multipliés par 3).
-4. Utilisez les informations obtenues pour corriger l'erreur dans la fonction. 
-5. Si vous voulez sortir du débogueur à tout moment, tapez la commande q et appuyez sur Entrée. Cela mettra fin à l'exécution du programme et vous ramènera au terminal.
-
-
-#### Exemple 2 (erreurs2.py):
-
-```python
-from typing import List
-
-def double_values(tableau: List[int]) -> None:
-    for compteur in range(len(tableau)):
-        # Introduire une erreur : parfois multiplier par 3 au lieu de 2
-        if compteur % 2 == 0:
-            tableau[compteur] *= 2
-        else:
-            tableau[compteur] *= 3
-
-    return tableau
-
-# Créer un tableau d'exemple
-tableau: List[int] = [1, 2, 3, 4, 5]
-
-# Appeler la fonction et stocker le résultat
-resultat = double_values(tableau)
-
-# Afficher le résultat final
-print(resultat)
-```
-
-##### Instructions pour l'exercice :
-1. Enregistrez ce code dans un fichier (par exemple, `exercice_pdb.py`).
-2. Ouvrez votre terminal et exécutez la commande suivante pour lancer le débogueur :
-   ```bash
-   python3 -m pdb exercice_pdb.py
-   ```
-
-3. Une fois dans le débogueur, les commandes suivantes vous aideront à explorer le programme :
-   - `l` : pour lister les lignes de code autour de la ligne actuelle.
-   - `n` : pour passer à la ligne suivante.
-   - `b <numéro_ligne>` : pour placer un point d'arrêt (breakpoint) à une ligne spécifique (par exemple, `b 5` pour placer un point d'arrêt sur la ligne 5).
-   - `c` : pour continuer l'exécution jusqu'au prochain point d'arrêt.
-   - `p tableau` : pour afficher le contenu du tableau à tout moment.
-   - `p compteur` : pour voir la valeur actuelle de `compteur`.
-
-4. Déroulement de l'exercice :
-   - Identifiez pourquoi certains éléments du tableau sont multipliés par 3.
-   - Corrigez l'erreur dans le code après avoir observé les résultats du débogueur.
-
-5. Sortir de pdb :
-   - Si vous voulez sortir du débogueur à tout moment, tapez la commande q et appuyez sur Entrée. Cela mettra fin à l'exécution du programme et vous ramènera au terminal.
-
-Veuillez noter toutes vos observations directement dans les fichiers C (`erreurs.c`) et Python (`erreurs1.py` et `exercice_pdb.py`) fournis, sous forme de commentaires.
-
-## Exercice 2.2 [★]
-
-### Chaîne de compilation (C)
-
-Voici les étapes de la chaîne de compilation :
-
-1. Préprocesseur : Le préprocesseur gère les directives comme `#include` pour insérer des bibliothèques et des macros.
-
-2. Compilation : Le compilateur transforme le code en assembleur et optimise les performances.
-
-3. Edition de liens : L'éditeur de liens combine les fichiers objets et bibliothèques nécessaires.
-
-4. Exécution : Enfin, le programme binaire est exécuté.
-
-#### Exemple 1 (aire.c)
+### Exemple 1 (aire.c)
 
 ```c
-// Directive de préprocesseur pour inclure la bibliothèque mathématique
-#include <math.h>  // Pour utiliser la constante M_PI
-
+#include <math.h>
 #include <stdio.h>
 
-// Fonction pour calculer l'aire d'un cercle
 float calculer_aire(float rayon) {
-    // Utilisation de la constante pi de la bibliothèque mathématique
     return M_PI * rayon * rayon;
 }
 
-// Point d'entrée du programme
 int main() {
     float rayon = 5.0;
     float aire = calculer_aire(rayon);
-    // Affichage du résultat
     printf("L'aire du cercle de rayon %.2f est %.2f\n", rayon, aire);
     return 0;
 }
 ```
 
-### Étapes de compilation avec optimisation :
+#### Compilation avec étapes détaillées
 
-1. **Préprocesseur** :  
-   ```
-   gcc -E aire.c -o aire.i
-   ```
+```bash
+# Préprocesseur
+gcc -E aire.c -o aire.i
 
-2. **Compilation** avec optimisation de niveau 2 :  
-   ```
-   gcc -O2 -S aire.i -o aire.s
-   ```
+# Compilation
+gcc -O2 -S aire.i -o aire.s
 
-3. **Assemblage** :  
-   ```
-   gcc -c aire.s -o aire.o
-   ```
+# Assemblage
+gcc -c aire.s -o aire.o
 
-4. **Édition de liens** :  
-   ```
-   gcc aire.o -lm -o aire
-   ```
+# Edition de liens
+gcc aire.o -lm -o aire
 
-5. **Exécution** :  
-   ```
-   ./aire
-   ```
-
-L'option `-O2` active des optimisations standard qui améliorent la performance sans compromettre la taille du code ou la compatibilité.
-
-#### Exemple 2 (sphere.h, surface.c, volume.c, main.c)
-
-Un programme C qui calcule le volume et la surface d'une sphère en utilisant deux fichiers source distincts : un pour le calcul du volume et un autre pour la surface. 
-
-
-##### Étapes de la chaîne de compilation avec optimisation :
-
-1. **Préprocesseur** :
-   ```
-   gcc -E main.c -o main.i
-   gcc -E volume.c -o volume.i
-   gcc -E surface.c -o surface.i
-   ```
-
-2. **Compilation** avec optimisation de niveau 3 (pour plus d'optimisations) :
-   ```
-   gcc -O3 -c main.i -o main.o
-   gcc -O3 -c volume.i -o volume.o
-   gcc -O3 -c surface.i -o surface.o
-   ```
-
-3. **Édition de liens** :
-   ```
-   gcc main.o volume.o surface.o -lm -o sphere
-   ```
-
-4. **Exécution** :
-   ```
-   ./sphere
-   ```
-
-L'option `-O3` active des optimisations plus agressives que `-O2`, telles que l'optimisation des boucles, l'inlining de fonctions, et d'autres techniques qui peuvent améliorer la performance dans les calculs intensifs comme ceux de ce programme.
-
-Veuillez noter toutes vos observations directement dans les fichiers C fournis, sous forme de commentaires.
-
-## Exercice 2.3 [★]
-Apprendre à analyser le bytecode d'une fonction Python avec le module `dis` et comprendre comment l'interpréteur Python exécute les instructions.
-
-Dans cet exercice, vous allez utiliser le module `dis` pour examiner le bytecode d'une fonction Python et répondre à des questions précises sur le processus d'interprétation. Le but est de comprendre comment Python traduit des fonctions en instructions bas-niveau et de découvrir les optimisations internes.
-
-1. **Exécuter et observer le bytecode** :
-   - Exécutez le code ci-dessous. Que remarquez-vous dans la sortie du module `dis` ?
-   - Le bytecode est une suite d'instructions que l'interpréteur Python va exécuter.
-   
-2. **Explication des instructions** :
-   - Pour chaque instruction du bytecode généré, essayez de comprendre son rôle. Utilisez la documentation ou les explications fournies ci-dessous.
-   
-3. **Expérimentation** :
-   - Modifiez la fonction `calculer_aire` en simplifiant l'expression mathématique, par exemple, en remplaçant `math.pi * rayon * rayon` par une valeur constante. Exécutez à nouveau `dis` et comparez le bytecode généré. Quelles différences voyez-vous ?
-   
-4. **Réflexion sur l'optimisation** :
-   - Quelles optimisations sont mises en œuvre par Python lorsque vous remplacez l'expression mathématique par une constante ? Observez si certaines instructions sont supprimées ou simplifiées.
-
-#### Exemple 1 
-
-```python
-import math
-import dis
-
-def calculer_aire(rayon: float) -> float:
-    return math.pi * rayon * rayon
-
-def main() -> None:
-    rayon : float = 5.0
-    aire : float = calculer_aire(rayon)
-    print(f"L'aire du cercle de rayon {rayon:.2f} est {aire:.2f}")
-
-if __name__ == "__main__":
-    # Utilisation de dis pour afficher le bytecode de la fonction
-    dis.dis(calculer_aire)
-    main()
+# Exécution
+./aire
 ```
 
-1. **Que fait chaque instruction du bytecode ?**  
-   Par exemple, les instructions comme `LOAD_GLOBAL`, `LOAD_FAST`, ou `BINARY_MULTIPLY` apparaîtront dans le bytecode. Que signifient-elles ?
-   
-   - **`LOAD_GLOBAL`** : Cette instruction charge une variable globale (ici `math.pi`).
-   - **`LOAD_FAST`** : Charge une variable locale, comme `rayon`.
-   - **`BINARY_MULTIPLY`** : Effectue une multiplication binaire entre deux éléments du sommet de la pile.
+---
 
-2. **Modification de l’expression** :  
-   Si vous remplacez l'expression `math.pi * rayon * rayon` par une valeur constante, quel changement observe-t-on dans le bytecode ? Est-il plus simple ou plus court ?
+### Exemple 2 – Programme multi-fichiers (sphere)
 
-3. **Comment fonctionne la pile d’exécution ?**  
-   Lors de l'analyse du bytecode, observez comment Python utilise une pile pour stocker temporairement les valeurs intermédiaires lors des calculs. Par exemple, les valeurs de `rayon` et de `math.pi` sont empilées, puis multipliées.
+* `sphere.h` : définitions
+* `surface.c` : fonctions surface
+* `volume.c` : fonctions volume
+* `main.c` : programme principal
 
-#### Exemple 2
-Ci-dessous un deuxième exemple utilisant le module `dis` pour analyser le bytecode d'une autre fonction, cette fois-ci en introduisant une structure de contrôle comme une boucle `for`. Cet exemple aidera à explorer le fonctionnement des boucles et des instructions associées dans le bytecode Python.
+#### Compilation multi-fichiers
 
-Analyser le bytecode d'une fonction Python contenant une boucle `for` pour comprendre comment Python gère les structures de contrôle. Dans cet exercice, vous allez explorer comment le bytecode est généré pour une fonction qui utilise une boucle `for`. Vous allez comparer la gestion de la boucle avec des opérations simples et découvrir comment l'interpréteur Python implémente ces structures de contrôle.
+```bash
+# Préprocesseur
+gcc -E main.c -o main.i
+gcc -E volume.c -o volume.i
+gcc -E surface.c -o surface.i
 
-### Étapes de l'exercice :
+# Compilation avec optimisation
+gcc -O3 -c main.i -o main.o
+gcc -O3 -c volume.i -o volume.o
+gcc -O3 -c surface.i -o surface.o
 
-1. **Analyser le bytecode d'une boucle `for`** :
-   - Exécutez le code ci-dessous et utilisez le module `dis` pour observer le bytecode de la fonction `calculer_somme`.
-   - Notez les instructions spécifiques liées à la gestion de la boucle.
+# Edition de liens
+gcc main.o volume.o surface.o -lm -o sphere
 
-2. **Comprendre les instructions de la boucle** :
-   - Essayez de comprendre le fonctionnement des instructions comme `SETUP_LOOP`, `GET_ITER`, `FOR_ITER`, et `POP_BLOCK`.
-   
-3. **Expérimentation** :
-   - Modifiez la fonction pour utiliser un autre type de boucle, comme une boucle `while`, et observez les différences dans le bytecode généré.
-
-### Exemple 2 (somme_dis.py):
-
-```python
-import dis
-
-def calculer_somme(n: int) -> int:
-    somme = 0
-    for i in range(n):
-        somme += i
-    return somme
-
-def main() -> None:
-    n = 10
-    resultat = calculer_somme(n)
-    print(f"La somme des entiers de 0 à {n-1} est {resultat}")
-
-if __name__ == "__main__":
-    # Utilisation de dis pour afficher le bytecode de la fonction
-    dis.dis(calculer_somme)
-    main()
+# Exécution
+./sphere
 ```
 
-1. **Comment est gérée la boucle `for` dans le bytecode ?**  
-   - Examinez les instructions `GET_ITER` et `FOR_ITER`. Que font-elles ?
-   - **`GET_ITER`** : Cette instruction obtient un itérateur à partir de l'objet `range(n)`.
-   - **`FOR_ITER`** : Récupère le prochain élément de l'itérateur et gère l'arrêt de la boucle lorsqu'il n'y a plus d'éléments.
+---
 
-2. **Structure de la boucle** :  
-   Identifiez les instructions comme `SETUP_LOOP` et `POP_BLOCK`. Quel est leur rôle dans la gestion de la boucle ?  
-   - **`SETUP_LOOP`** : Prépare la gestion de la boucle et la gestion des exceptions (comme une interruption de la boucle).
-   - **`POP_BLOCK`** : Enlève la boucle de la pile de contrôle une fois qu'elle est terminée.
+## Exercice 2.4 [★★] – Manipulation de chaînes de caractères en C
 
-3. **Modification de la boucle** :  
-   Changez la boucle `for` pour une boucle `while` et exécutez à nouveau le module `dis` pour voir les différences dans le bytecode.
-   
-   Exemple de modification :
-   ```python
-   def calculer_somme(n: int) -> int:
-       somme = 0
-       i = 0
-       while i < n:
-           somme += i
-           i += 1
-       return somme
-   ```
+**Objectifs :**
 
-   Comparez les instructions générées pour la boucle `while` avec celles de la boucle `for`.
-
-Veuillez noter toutes vos observations directement dans les fichiers Python fournis, sous forme de commentaires.
-
-## Exercice 2.4 [★★]
-
-**Manipulation de Chaînes de Caractères**
-
-**Objectif :** Écrire des programmes en C et en Python pour effectuer les opérations suivantes sur des chaînes de caractères, sans utiliser de bibliothèques standard ou externes :
-
-1. **Calcul de la Longueur d'une Chaîne :**
-   - Écrire une fonction qui calcule le nombre de caractères dans une chaîne de caractères. Cette fonction doit parcourir la chaîne caractère par caractère jusqu'à atteindre le caractère nul (`\0`) et compter les caractères.
-
-2. **Copie d'une Chaîne :**
-   - Écrire une fonction qui copie une chaîne de caractères dans une autre chaîne. Cette fonction doit parcourir la chaîne source caractère par caractère et les copier dans la chaîne de destination. Assurez-vous que la chaîne destination se termine par le caractère nul (`\0`).
-
-3. **Concaténation de Deux Chaînes :**
-   - Écrire une fonction qui concatène deux chaînes de caractères. La fonction doit copier la première chaîne dans une chaîne de résultat, puis ajouter les caractères de la deuxième chaîne à partir de la fin de la première chaîne. Le résultat doit se terminer par le caractère nul (`\0`).
+1. Calculer la longueur d’une chaîne.
+2. Copier une chaîne dans une autre.
+3. Concaténer deux chaînes.
 
 **Instructions :**
+Écrire un programme `chaine.c` qui demande à l’utilisateur deux chaînes et applique les trois opérations. Les résultats doivent être affichés.
 
-- **En C :** Écrire un programme nommé `chaine.c` qui utilise les fonctions définies pour calculer la longueur, copier, et concaténer les chaînes. Demandez à l'utilisateur de saisir deux chaînes de caractères et affichez les résultats de chaque opération.
+---
 
-- **En Python :** Écrire un programme nommé `chaine.py` qui réalise les mêmes opérations que le programme en C. Demandez à l'utilisateur de saisir deux chaînes de caractères et affichez les résultats de chaque opération.
+## Exercice 2.5 [★★] – Gestion des données d’étudiant.e.s en C
 
-## Exercice 2.5 [★★]
-**Gestion des données d'étudiant.e.s**
+**Objectif :** Écrire un programme `bd_école.c` pour gérer les données de 5 étudiant.e.s.
 
-**Objectif :** Écrire des programmes en C (`bd_école.c`) et en Python (`bd_école.py`) pour gérer les données de 5 étudiant.e.s en utilisant des structures en C et des classes en Python.
+1. Définir une structure `struct` pour l’étudiant (nom, prénom, adresse, notes).
+2. Initialiser et manipuler les données (`strcpy`).
+3. Demander à l’utilisateur de saisir les informations pour chaque étudiant.
+4. Afficher les informations après saisie.
 
-### En C
+---
 
-1. **Définir une Structure :**
-   - Créez une structure (`struct`) pour représenter les informations d'un étudiant. Cette structure doit inclure des membres pour le nom, le prénom, l'adresse, et les notes, par exemple.
+## Exercice 2.6 [★★] – Recherche de phrases dans un fichier en C
 
-2. **Initialiser et manipuler les données :**
-   - Utilisez la fonction `strcpy` pour initialiser les chaînes de caractères dans la structure.
-   - Créez un tableau de 5 éléments de cette structure pour représenter 5 étudiant.e.s.
+**Objectif :** Écrire un programme `phrases.c` pour rechercher une phrase dans un fichier.
 
-3. **Saisie et affichage des données :**
-   - Demandez à l'utilisateur de saisir les détails pour chaque étudiant.
-   - Affichez les informations des 5 étudiant.e.s après la saisie.
+1. Demander le nom du fichier et la phrase à rechercher.
+2. Lire le fichier ligne par ligne (`fopen`, `fgets`, `fclose`).
+3. Pour chaque ligne, compter le nombre d’occurrences de la phrase.
+4. Afficher les résultats formatés.
 
-### En Python
+---
 
-1. **Définir une classe :**
-   - Créez une classe pour représenter les informations d'un étudiant. Cette classe doit inclure des attributs pour le nom, le prénom, l'adresse, et les notes.
+## Exercice 2.7 [★★★] – Gestion des couleurs et comptage
 
-2. **Initialiser et manipuler les données :**
-   - Créez une instance de la classe pour chaque étudiant.e. 
-   - Stockez ces instances dans une liste.
+**Objectif :** Écrire un programme `couleurs.c` qui stocke 100 couleurs (R, G, B, A) et affiche les couleurs distinctes avec leur nombre d’occurrences.
 
-3. **Saisie et affichage des données :**
-   - Demandez à l'utilisateur de saisir les détails pour chaque étudiant.
-   - Affichez les informations de chaque étudiant après la saisie.
+1. Définir une structure `Couleur`.
+2. Créer un tableau de 100 couleurs.
+3. Compter les occurrences de chaque couleur distincte.
+4. Afficher les résultats.
 
-**Exemple :**
-
-Un exemple d'utilisation de ce programme pourrait être :
-
-- L'utilisateur entre les détails de 5 étudiant.e.s, puis le programme affiche ces informations, par exemple :
-
-```
-  Étudiant.e 1 :
-  Nom : Dupont
-  Prénom : Marie
-  Adresse : 20, Boulevard Niels Bohr, Lyon
-  Note 1 : 16.5
-  Note 2 : 12.1
-
-  Étudiant.e 2 :
-  Nom : Martin
-  Prénom : Pierre
-  Adresse : 22, Boulevard Niels Bohr, Lyon
-  Note 1 : 14.0
-  Note 2 : 14.1
-
-  ...
-```
-
-## Exercice 2.6 [★★]
-
-**Recherche de phrases dans un fichier**
-
-**Objectif :** Écrire des programmes en C (`phrases.c`) et en Python (`phrases.py`) qui permettent à l'utilisateur de rechercher une phrase spécifique dans un fichier donné. Le programme doit afficher les lignes du fichier où la phrase est présente, ainsi que le nombre de fois qu'elle apparaît dans chaque ligne.
-
-### En C
-
-1. **Demander les entrées :**
-   - Demandez à l'utilisateur de saisir le nom du fichier dans lequel la recherche sera effectuée.
-   - Demandez à l'utilisateur de saisir la phrase à rechercher.
-
-2. **Ouvrir et lire le fichier :**
-   - Utilisez les fonctions de lecture de fichiers en C telles que `fopen`, `fgets`, et `fclose` pour ouvrir le fichier et lire son contenu ligne par ligne.
-
-3. **Rechercher la phrase :**
-   - Pour chaque ligne lue, comptez combien de fois la phrase apparaît.
-   - Si la phrase est présente, affichez le numéro de la ligne et le nombre de fois qu'elle apparaît.
-
-4. **Afficher les résultats :**
-   - Affichez les résultats de la recherche de manière formatée.
-
-### En Python
-
-1. **Demander les entrées :**
-   - Demandez à l'utilisateur de saisir le nom du fichier dans lequel la recherche sera effectuée.
-   - Demandez à l'utilisateur de saisir la phrase à rechercher.
-
-2. **Ouvrir et lire le fichier :**
-   - Utilisez les fonctions de lecture de fichiers en Python comme `open` et `readlines` pour ouvrir le fichier et lire son contenu ligne par ligne.
-
-3. **Rechercher la phrase :**
-   - Pour chaque ligne lue, comptez combien de fois la phrase apparaît.
-   - Si la phrase est présente, affichez le numéro de la ligne et le nombre de fois qu'elle apparaît.
-
-4. **Afficher les résultats :**
-   - Affichez les résultats de la recherche de manière formatée.
-
-### Exemple d'utilisation
-
-```
-Entrez le nom du fichier : fichier.txt
-Entrez la phrase que vous souhaitez rechercher : exemple de phrase
-
-Résultats de la recherche :
-Ligne 10, 2 fois
-Ligne 30, 1 fois
-```
-
-## Exercice 2.7 [★★★]
-**Gestion des couleurs et comptage des occurrences**
-
-**Objectif :** Écrire des programmes en C (`couleurs.c`) et en Python (`couleurs.py`) qui stockent un ensemble de couleurs et affichent les couleurs distinctes avec leur nombre d'occurrences. Chaque couleur est représentée par quatre valeurs : R (rouge), G (vert), B (bleu), et A (alpha), chacune étant un octet.
-
-### En C
-
-1. **Définir une structure :**
-   - Créez une structure `Couleur` pour représenter une couleur, avec des membres pour R, G, B et A.
-
-2. **Créer un tableau de couleurs :**
-   - Déclarez un tableau de 100 éléments de type `Couleur` pour stocker les couleurs.
-
-3. **Compter les occurrences :**
-   - Créez une autre structure ou tableau pour stocker les couleurs distinctes et leur nombre d'occurrences.
-   - Parcourez le tableau initial de couleurs, vérifiez si chaque couleur est déjà présente dans la structure de couleurs distinctes, et mettez à jour le compteur approprié.
-
-4. **Afficher les résultats :**
-   - Affichez chaque couleur distincte et le nombre d'occurrences dans le tableau initial.
-
-### En Python
-
-1. **Définir une classe :**
-   - Créez une classe `Couleur` pour représenter une couleur, avec des attributs pour R, G, B et A.
-
-2. **Créer un tableau de couleurs :**
-   - Créez une liste de 100 instances de la classe `Couleur` pour stocker les couleurs.
-
-3. **Compter les occurrences :**
-   - Utilisez un dictionnaire pour stocker les couleurs distinctes et leur nombre d'occurrences.
-   - Parcourez la liste de couleurs, vérifiez si chaque couleur est déjà présente dans le dictionnaire, et mettez à jour le compteur approprié.
-
-4. **Afficher les résultats :**
-   - Affichez chaque couleur distincte et le nombre d'occurrences dans la liste initiale.
-
-### Exemples
-
-- Supposons que le tableau de couleurs contienne :
-  ```
-  ff 0x23 0x23 0x45
-  ff 0x00 0x23 0x12
-  ff 0x23 0x23 0x45
-  ```
-  Le programme doit afficher :
-  ```
-  ff 0x23 0x23 0x45 : 2
-  ff 0x00 0x23 0x12 : 1
-  ```
+---
 
 ## Exercice 2.8 [★★★]
-**Exercice : Synthèse des approches en langage C et Python**
 
-**Objectif :** Créer un rapport comparatif (`programmation_C_Python.md`) détaillé qui synthétise les différentes approches de programmation en C et Python, en couvrant les aspects suivants :
+**Rechercher une phrase dans un tableau de phrases**
 
-1. **Débogage :** Compare les méthodes de débogage en C (avec `gdb`) et en Python (avec `pdb`), en expliquant les outils, les techniques et les différences dans l'approche du débogage.
 
-2. **Chaîne de Compilation :** Décris le processus de compilation en C avec `gcc`, en détaillant chaque étape (prétraitement, compilation, assemblage, et édition des liens) et compare-le avec la gestion des modules en Python.
+Écrivez un programme en C nommé `chercher.c*` qui contient un tableau de 10 phrases (tableau de tableaux de caractères) et qui recherche si une phrase donnée est présente dans le tableau. L'objectif est de réaliser cette recherche sans utiliser les fonctions de bibliothèques standards ou externes.
 
-3. **Inspection de Code :** Analyse l’utilisation de `dis` en Python pour examiner le bytecode et compare-le avec les outils disponibles pour inspecter le code compilé en C.
+**Exemple**:
+Supposons que le tableau contienne les phrases suivantes :
 
-4. **Manipulation de Chaînes de Caractères :** Compare les techniques de manipulation de chaînes en C (comme les fonctions de la bibliothèque standard) et en Python (comme les méthodes de chaîne et les f-strings), en mettant en évidence les avantages et les inconvénients de chaque approche.
+```
+ "Bonjour, comment ça va ?"
+ "Le temps est magnifique aujourd'hui."
+ "C'est une belle journée."
+ "La programmation en C est amusante."
+ "Les tableaux en C sont puissants."
+ "Les pointeurs en C peuvent être déroutants."
+ "Il fait beau dehors."
+ "La recherche dans un tableau est intéressante."
+ "Les structures de données sont importantes."
+ "Programmer en C, c'est génial."
+```
 
-5. **Gestion des Données et Recherche dans les Fichiers :** Compare la gestion des structures de données en C (structures) et en Python (classes) pour les données d’étudiant.e.s, et explique les techniques pour rechercher des phrases dans des fichiers en utilisant les deux langages.
+Si on recherche la phrase "La programmation en C est amusante.", le programme doit afficher `Phrase trouvée`. Si on recherche `Je préfère le Python.`, le programme doit afficher `hrase non trouvée`.
 
+---
+
+## Exercice 2.9 [★★★] – Synthèse des approches en C
+
+**Objectif :** Créer un rapport  (`programmation_C.md`) qui synthétise :
+
+* Débogage avec GDB.
+* Chaîne de compilation en C avec `gcc`.
+* Manipulation de chaînes en C.
+* Gestion des structures pour les données et recherche dans les fichiers.
+
+---
 
 ## Fichiers à rendre
 
-- Fichiers md: programmation_C_Python.md, CONTRIBUTORS.md, README.md
-- Fichiers C: *aire.c, bd_école.c, chaine.c, couleurs.c, erreurs.c, main.c, phrases.c, sizeof_types.c, sphere.h, surface.c, volume.c*
-- Fichiers Python: *aire.py, aire_dis.py, bd_école.py, chaine.py, couleurs.py, erreurs1.py, erreurs2.py, phrases.py, somme_dis.py, sizeof_types.py, variables.py*
+* **Markdown :** `programmation_C.md`, `CONTRIBUTORS.md`, `README.md`
+* **C :** `aire.c`, `bd_école.c`, `chaine.c`, `chercher.c`, `couleurs.c`, `erreurs.c`, `main.c`, `phrases.c`, `sizeof_types.c`, `sphere.h`, `surface.c`, `volume.c`
 
-## Instructions
+**Instructions générales :**
 
-- N'oubliez pas les commentaires (nom du fichier, objectif, auteurs, lignes importantes de code, etc.). Les commentaires sont notés.
-- N'oubliez pas de mettre à jour le fichier README.md et d'ajouter les détails.
-- Compte rendu au format .zip en un seul fichier.
+* Ajouter des commentaires dans les fichiers C (nom, objectif, auteurs, lignes importantes).
+* Mettre à jour le fichier `README.md`.
+* Livrer un unique fichier `.zip`.
