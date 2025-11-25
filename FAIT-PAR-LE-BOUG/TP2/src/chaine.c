@@ -2,7 +2,6 @@
  * Nom du fichier : chaine.c
  * Objectif : Manipuler des chaînes de caractères (longueur, copie, concaténation).
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 3, 13, 24
  * Commande pour exécuter le fichier : gcc chaine.c -o chaine && ./chaine
  */
 #include <stdio.h>

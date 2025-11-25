@@ -2,7 +2,6 @@
  * Nom du fichier : calculs.c
  * Objectif : Effectuer des calculs arithmétiques et logiques de base.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 23, 26, 36
  * Commande pour exécuter le fichier : gcc calculs.c -o calculs && ./calculs
  */
 #include <stdio.h>

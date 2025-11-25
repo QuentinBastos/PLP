@@ -1,3 +1,9 @@
+/*
+ * Nom du fichier : operateurs.c
+ * Objectif : Démonstration des opérateurs arithmétiques et logiques.
+ * Auteurs : Adrian RABIAN, Quentin BASTOS
+ * Commande pour exécuter le fichier : gcc operateurs.c -o operateurs && ./operateurs
+ */
 #include <stdio.h>
 
 int main() {

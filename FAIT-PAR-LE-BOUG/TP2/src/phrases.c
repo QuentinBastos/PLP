@@ -2,7 +2,6 @@
  * Nom du fichier : phrases.c
  * Objectif : Rechercher une phrase dans un fichier texte.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 18, 27, 33
  * Commande pour exécuter le fichier : gcc phrases.c -o phrases && ./phrases
  */
 #include <stdio.h>

@@ -2,7 +2,6 @@
  * Nom du fichier : couleurs.c
  * Objectif : Compter et afficher les couleurs distinctes dans un tableau.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 7, 18, 40
  * Commande pour exécuter le fichier : gcc couleurs.c -o couleurs && ./couleurs
  */
 #include <stdio.h>

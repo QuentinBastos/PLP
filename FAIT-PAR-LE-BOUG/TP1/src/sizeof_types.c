@@ -2,7 +2,6 @@
  * Nom du fichier : sizeof_types.c
  * Objectif : Afficher la taille en octets des différents types de données.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 24, 30, 37
  * Commande pour exécuter le fichier : gcc sizeof_types.c -o sizeof_types && ./sizeof_types
  */
 #include <stdio.h>

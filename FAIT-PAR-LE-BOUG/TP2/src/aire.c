@@ -2,7 +2,6 @@
  * Nom du fichier : aire.c
  * Objectif : Calculer l'aire d'un cercle en utilisant une fonction.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 7, 9, 15
  * Commande pour exécuter le fichier : gcc aire.c -o aire -lm && ./aire
  */
 // Directive de préprocesseur pour inclure la bibliothèque mathématique

@@ -1,3 +1,9 @@
+/*
+ * Nom du fichier : bd_école.c
+ * Objectif : Gérer une base de données d'étudiants avec allocation dynamique.
+ * Auteurs : Adrian RABIAN, Quentin BASTOS
+ * Commande pour exécuter le fichier : gcc bd_école.c -o bd_ecole && ./bd_ecole
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>  // Nécessaire pour utiliser strcpy()

@@ -2,7 +2,6 @@
  * Nom du fichier : controle.c
  * Objectif : Utiliser des structures de contrôle pour filtrer des nombres.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 6, 15, 25
  * Commande pour exécuter le fichier : gcc controle.c -o controle && ./controle
  */
 #include <stdio.h>

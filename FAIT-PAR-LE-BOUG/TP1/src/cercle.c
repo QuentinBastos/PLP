@@ -2,7 +2,6 @@
  * Nom du fichier : cercle.c
  * Objectif : Calculer l'aire et le périmètre d'un cercle.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 15, 16
  * Commande pour exécuter le fichier : gcc cercle.c -o cercle && ./cercle
  */
 #include <stdio.h>

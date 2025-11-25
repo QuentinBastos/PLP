@@ -2,7 +2,6 @@
  * Nom du fichier : chercher.c
  * Objectif : Rechercher une phrase dans un tableau de phrases sans utiliser de fonctions de bibliothèque standard pour la recherche.
  * Auteurs : Adrian RABIAN, Quentin BASTOS
- * Lignes importantes : 26, 40
  * Commande pour exécuter le fichier : gcc chercher.c -o chercher && ./chercher
  */
 #include <stdio.h>
