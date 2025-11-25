@@ -1,8 +1,7 @@
 # Bibliothèques
 
 * `stdio.h` : Bibliothèque standard d'entrées/sorties
-* `sys` : Bibliothèque python pour les appels systèmes
-* `math` : Bibliothèque python pour les fonctions mathématiques
+* `math.h` : Bibliothèque standard pour les fonctions mathématiques
 
 # Références
 
