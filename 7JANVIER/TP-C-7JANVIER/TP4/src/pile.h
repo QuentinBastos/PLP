@@ -1,7 +1,6 @@
 #ifndef PILE_H
 #define PILE_H
 
-void traiter(char *input);
-int evaluer(char *postfix);
+void handle_infix_expr(char *input);
 
 #endif

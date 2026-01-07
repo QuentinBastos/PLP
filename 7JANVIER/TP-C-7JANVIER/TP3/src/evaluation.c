@@ -3,40 +3,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-double evaluate_expression(ASTNode *root) {
-  if (root == NULL) {
-    fprintf(stderr, "Erreur: expression invalide (AST nul).\n");
-    exit(EXIT_FAILURE);
+double evaluate_expression(ASTNode *node) {
+  if (!node) {
+    fprintf(stderr, "Arbre vide.\n");
+    exit(1);
   }
 
-  if (root->type == NODE_NUMBER) {
-    return root->value;
+  if (node->type == NODE_NUMBER) {
+    return node->value;
   }
+  
+  if (node->type == NODE_OPERATOR) {
+    double v_g = evaluate_expression(node->op.left);
+    double v_d = evaluate_expression(node->op.right);
+    char op = node->op.operator;
 
-  if (root->type == NODE_OPERATOR) {
-    double left_value = evaluate_expression(root->op.left);
-    double right_value = evaluate_expression(root->op.right);
-    char operator= root->op.operator;
-
-    switch (operator) {
-    case '+':
-      return left_value + right_value;
-    case '-':
-      return left_value - right_value;
-    case '*':
-      return left_value * right_value;
-    case '/':
-      if (right_value == 0.0) {
-        fprintf(stderr, "Erreur: division par zéro.\n");
-        exit(EXIT_FAILURE);
-      }
-      return left_value / right_value;
-    default:
-      fprintf(stderr, "Erreur: opérateur inconnu '%c'.\n", operator);
-      exit(EXIT_FAILURE);
+    switch (op) {
+      case '+': return v_g + v_d;
+      case '-': return v_g - v_d;
+      case '*': return v_g * v_d;
+      case '/': 
+        if (v_d == 0) {
+          fprintf(stderr, "Division par zero !\n");
+          exit(1);
+        }
+        return v_g / v_d;
+      default:
+        fprintf(stderr, "Opérateur '%c' non supporté.\n", op);
+        exit(1);
     }
   }
-
-  fprintf(stderr, "Erreur: nœud AST invalide.\n");
-  exit(EXIT_FAILURE);
+  
+  return 0;
 }

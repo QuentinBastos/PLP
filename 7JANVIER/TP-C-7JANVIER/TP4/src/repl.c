@@ -9,148 +9,95 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_COMMANDS_SIZE 100
-
 typedef struct {
-  char name[64];
-  void (*function)(char *arg, char *langue);
-  char langue[3];
+  char key[32];
+  void (*cb)(char *args, char *lang);
+  char l[4];
   bool arg;
-} Commande;
+} Action;
 
-void afficher_version(char *arg, char *langue);
-void afficher_aide(char *arg, char *langue);
-void traiter_quit(char *arg, char *langue);
-void traiter_echo(char *arg, char *langue);
-void date(char *arg, char *langue);
-void afficher_message(char *fr, char *en, char *langue);
+void cb_ver(char *a, char *l);
+void cb_hlp(char *a, char *l);
+void cb_bye(char *a, char *l);
+void cb_prt(char *a, char *l);
+void cb_now(char *a, char *l);
 
-Commande commandes[] = {{"version", afficher_version, "fr", false},
-                        {"aide", afficher_aide, "fr", false},
-                        {"help", afficher_aide, "en", false},
-                        {"quitter", traiter_quit, "fr", false},
-                        {"quit", traiter_quit, "en", false},
-                        {"afficher ", traiter_echo, "fr", true},
-                        {"echo ", traiter_echo, "en", true},
-                        {"date", date, "fr", false},
-                        {"now", date, "en", false}};
+Action list[] = {
+    {"version", cb_ver, "fr", false},
+    {"aide", cb_hlp, "fr", false},
+    {"help", cb_hlp, "en", false},
+    {"quitter", cb_bye, "fr", false},
+    {"quit", cb_bye, "en", false},
+    {"afficher ", cb_prt, "fr", true},
+    {"echo ", cb_prt, "en", true},
+    {"date", cb_now, "fr", false},
+    {"now", cb_now, "en", false}
+};
+size_t nb = sizeof(list) / sizeof(Action);
+int active = 1;
 
-size_t nb_commande = sizeof(commandes) / sizeof(commandes[0]);
-int programme_fini = 1;
-
-void stringToLower(char *str) {
-  for (int i = 0; str[i]; i++) {
-    str[i] = tolower((unsigned char)str[i]);
-  }
+void str_lower(char *s) {
+  for (; *s; ++s) *s = tolower((unsigned char)*s);
 }
 
-void traiter_expression(char *commande, char *lang) {
-  (void)lang;
-  traiter(commande);
-}
+void process_line(char *line, Action *acts, size_t count) {
+  char buf[1024];
+  strcpy(buf, line);
+  str_lower(buf);
 
-void taiter(char *cmd, Commande *commandes, size_t nb_commandes, char *langue) {
-  (void)langue;
-  char commande_lower[1024];
-  strcpy(commande_lower, cmd);
-  stringToLower(commande_lower);
-
-  for (size_t i = 0; i < nb_commandes; i++) {
-    size_t len = strlen(commandes[i].name);
-    if (len == 0)
-      continue;
-
-    if (strncmp(commande_lower, commandes[i].name, len) == 0) {
-      char *lang = commandes[i].langue;
-      commandes[i].function(cmd, lang);
+  for (size_t i = 0; i < count; i++) {
+    size_t len = strlen(acts[i].key);
+    if (!len) continue;
+    if (strncmp(buf, acts[i].key, len) == 0) {
+      acts[i].cb(line, acts[i].l);
       return;
     }
   }
 
-  if (commande_lower[0] != '\0' &&
-      (isdigit((unsigned char)commande_lower[0]) || commande_lower[0] == '(')) {
-    traiter_expression(cmd, "en");
+  // Fallback: Expression
+  if (*buf && (isdigit((unsigned char)*buf) || *buf == '(')) {
+    handle_infix_expr(line); // Changed name here
     return;
   }
 
-  printf("Cette commande n'existe pas : %s\n", cmd);
+  printf("Cmd inconnue: %s\n", line);
 }
 
-void afficher_message(char *fr, char *en, char *langue) {
-  printf("%s", strcmp(langue, "fr") == 0 ? fr : en);
+void cb_ver(char *a, char *l) {
+  printf(strcmp(l,"fr")==0 ? "TP4 Version:\n" : "TP4 Release:\n");
+  printf("GCC %d.%d\n", __GNUC__, __GNUC_MINOR__);
 }
 
-void afficher_version(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Version actuelle de l'interpréteur : \n",
-                   "Actual interpretor version: \n", langue);
-  printf("GCC %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+void cb_bye(char *a, char *l) {
+  printf(strcmp(l,"fr")==0 ? "Au revoir.\n" : "Goodbye.\n");
+  active = 0;
 }
 
-void traiter_quit(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Arrêt...\n", "Stopping...\n", langue);
-  programme_fini = 0;
+void cb_prt(char *a, char *l) {
+  int off = (strcmp(l,"fr")==0) ? 9 : 5;
+  printf("ECHO: %s\n", a + off);
 }
 
-void traiter_echo(char *arg, char *langue) {
-  afficher_message("Affichage : ", "Echo : ", langue);
-  int i = strcmp(langue, "fr") == 0 ? 9 : 5;
-  for (; arg[i] != '\0'; i++) {
-    printf("%c", arg[i]);
-  }
-  printf("\n"); // Saut de ligne après la sortie
+void cb_now(char *a, char *l) {
+  time_t t = time(0);
+  struct tm *now = localtime(&t);
+  printf("%d-%02d-%02d %02d:%02d\n", now->tm_year+1900, now->tm_mon+1, now->tm_mday, now->tm_hour, now->tm_min);
 }
 
-void date(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Date du jour :\n", "Today date: \n", langue);
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-  printf("now: %d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900, tm.tm_mon + 1,
-         tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+void cb_hlp(char *a, char *l) {
+  printf("Help:\n");
+  for(size_t i=0; i<nb; i++) printf(" . %s\n", list[i].key);
 }
 
-void afficher_aide(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Commandes disponibles : \n", "Available commands: \n",
-                   langue);
-  for (size_t i = 0; i < nb_commande; i++) {
-    printf("Commande : %s \n", commandes[i].name);
-  }
-}
-
-int main() {
-  while (programme_fini) {
-    printf("> ");
-
-    // Buffer pour stocker la commande utilisateur
-    char commande[1024];
-
-    if (fgets(commande, sizeof(commande), stdin) == NULL) {
-      break;
-    }
-
-    // Enlève le caractère de fin de ligne ajouté par fgets
-    commande[strcspn(commande, "\n")] = 0;
-    if (commande[0] == '\0') {
-      continue;
-    }
-
-    taiter(commande, commandes, nb_commande, NULL);
-
+int main(void) {
+  char buf[1024];
+  while(active) {
+    printf("TP4> ");
+    if(!fgets(buf, sizeof(buf), stdin)) break;
+    buf[strcspn(buf, "\n")] = 0;
+    if(!*buf) continue;
+    process_line(buf, list, nb);
     printf("\n");
   }
-
   return 0;
 }
-
-/*
-    Questions à réfléchir
-
-    - Commande echo avec arguments
-    -> Il affiche les arguments avec le echo
-
-    - Ajouter des nouvelles commandes
-    -> Pour le moment en rajoutant des else if
-*/

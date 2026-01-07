@@ -10,273 +10,180 @@
 #include <string.h>
 #include <time.h>
 
-#define MAX_COMMANDS_SIZE 100
-
+// Structs
 typedef struct {
-  char name[64];
-  void (*function)(char *arg, char *langue);
-  char langue[3];
+  char k[64];
+  void (*fn)(char *a, char *l);
+  char l[4];
   bool arg;
-} Commande;
+} Cfg;
 
-void afficher_version(char *arg, char *langue);
-void afficher_aide(char *arg, char *langue);
-void traiter_quit(char *arg, char *langue);
-void traiter_echo(char *arg, char *langue);
-void date(char *arg, char *langue);
-void afficher_message(char *fr, char *en, char *langue);
+// Calls
+void f_ver(char *a, char *l);
+void f_hlp(char *a, char *l);
+void f_xit(char *a, char *l);
+void f_ech(char *a, char *l);
+void f_dat(char *a, char *l);
 
-Commande commandes[] = {{"version", afficher_version, "fr", false},
-                        {"aide", afficher_aide, "fr", false},
-                        {"help", afficher_aide, "en", false},
-                        {"quitter", traiter_quit, "fr", false},
-                        {"quit", traiter_quit, "en", false},
-                        {"afficher ", traiter_echo, "fr", true},
-                        {"echo ", traiter_echo, "en", true},
-                        {"date", date, "fr", false},
-                        {"now", date, "en", false}};
+Cfg cmds[] = {
+    {"version", f_ver, "fr", false},
+    {"aide", f_hlp, "fr", false},
+    {"help", f_hlp, "en", false},
+    {"quitter", f_xit, "fr", false},
+    {"quit", f_xit, "en", false},
+    {"afficher ", f_ech, "fr", true},
+    {"echo ", f_ech, "en", true},
+    {"date", f_dat, "fr", false},
+    {"now", f_dat, "en", false}
+};
+size_t n_cmds = sizeof(cmds)/sizeof(Cfg);
+int keep_running = 1;
 
-size_t nb_commande = sizeof(commandes) / sizeof(commandes[0]);
-int programme_fini = 1;
-
-void stringToLower(char *str) {
-  for (int i = 0; str[i]; i++) {
-    str[i] = tolower((unsigned char)str[i]);
-  }
-}
-
-void replace_all_str(char *str, const char *old, const char *new_str) {
-  char buffer[8192];
+void str_sub(char *s, const char *old, const char *rep) {
+  char b[8192];
   char *p;
-  while ((p = strstr(str, old))) {
-    int len = p - str;
-    strncpy(buffer, str, len);
-    buffer[len] = '\0';
-    strcat(buffer, new_str);
-    strcat(buffer, p + strlen(old));
-    strcpy(str, buffer);
+  while ((p = strstr(s, old))) {
+    unsigned long len = p - s;
+    strncpy(b, s, len);
+    b[len] = 0;
+    strcat(b, rep);
+    strcat(b, p + strlen(old));
+    strcpy(s, b);
   }
 }
 
-void traiter_expression(char *commande, char *lang) {
-  (void)lang;
+void to_low(char *s) {
+  for(;*s;++s) *s = tolower((unsigned char)*s);
+}
 
-  // 1. Lambda: (lambda x.expr) arg
-  if (strstr(commande, "lambda")) {
-    char var_name[64], expr[4096], arg_val[64];
-    char *lambda_start = strstr(commande, "lambda");
-    char *dot = strchr(lambda_start, '.');
-    char *open_paren = strchr(commande, '(');
-    char *close_paren = NULL;
-    int paren_count = 0;
-
-    if (open_paren) {
-      char *current = open_paren;
-      while (*current) {
-        if (*current == '(')
-          paren_count++;
-        else if (*current == ')') {
-          paren_count--;
-          if (paren_count == 0) {
-            close_paren = current;
-            break;
-          }
+void handle_logic(char *line, char *lang) {
+  // Lambda: (lambda x.expr) arg
+  if (strstr(line, "lambda")) {
+    char v[64], ex[4096], arg[64];
+    char *start = strstr(line, "lambda");
+    char *dot = strchr(start, '.');
+    char *par = strchr(line, '(');
+    char *end = NULL;
+    int c = 0;
+    
+    if (par) {
+        char *cur = par;
+        while(*cur) {
+            if(*cur=='(') c++;
+            else if(*cur==')') { c--; if(c==0) { end=cur; break; } }
+            cur++;
         }
-        current++;
-      }
     }
 
-    if (dot && close_paren) {
-      // Extract variable name
-      strncpy(var_name, lambda_start + 7, dot - (lambda_start + 7));
-      var_name[dot - (lambda_start + 7)] = '\0';
-      char *saveptr1, *saveptr2;
-      char *trimmed_var = strtok_r(var_name, " \t", &saveptr1);
+    if (dot && end) {
+        strncpy(v, start+7, dot-(start+7)); v[dot-(start+7)]=0;
+        char *ctx;
+        char *tv = strtok_r(v, " \t", &ctx);
 
-      // Extract expression
-      strncpy(expr, dot + 1, close_paren - (dot + 1));
-      expr[close_paren - (dot + 1)] = '\0';
+        strncpy(ex, dot+1, end-(dot+1)); ex[end-(dot+1)]=0;
+        
+        strcpy(arg, end+1);
+        char *ctx2;
+        char *ta = strtok_r(arg, " \t\r\n", &ctx2);
+        
+        char sub[64] = "";
+        Value val;
+        if (ta && isalpha(ta[0]) && sym_get(ta, &val)==0) {
+            if(val.kind == T_INT) sprintf(sub, "%d", val.val.i);
+            else if(val.kind == T_REAL) sprintf(sub, "%g", val.val.f);
+            else if(val.kind == T_STR) strcpy(sub, val.val.s);
+        } else if (ta) {
+            strcpy(sub, ta);
+        }
 
-      // Extract argument
-      strcpy(arg_val, close_paren + 1);
-      char *trimmed_arg = strtok_r(arg_val, " \t\r\n", &saveptr2);
+        if (tv && sub[0]) str_sub(ex, tv, sub);
 
-      char substitution_val[64] = "";
-      VarValue v;
-      if (trimmed_arg && isalpha((unsigned char)trimmed_arg[0]) &&
-          get_variable(trimmed_arg, &v) == 0) {
-        if (v.type == TYPE_INT)
-          sprintf(substitution_val, "%d", v.value.i_val);
-        else if (v.type == TYPE_REAL)
-          sprintf(substitution_val, "%g", v.value.r_val);
-        else if (v.type == TYPE_STRING)
-          strcpy(substitution_val, v.value.s_val); // Direct string substitution
-      } else if (trimmed_arg) {
-        strcpy(substitution_val, trimmed_arg);
-      }
-
-      if (trimmed_var && substitution_val[0] != '\0') {
-        replace_all_str(expr, trimmed_var, substitution_val);
-      }
-      traiter_expression(expr, lang);
-      return;
+        handle_logic(ex, lang);
+        return;
     }
   }
 
-  // 2. Assignment: var = expr
-  char *eq = strchr(commande, '=');
+  // Assign: x = expr
+  char *eq = strchr(line, '=');
   if (eq) {
-    char name[64], expr_part[4096];
-    *eq = '\0';
-    strcpy(name, commande);
-    strcpy(expr_part, eq + 1);
-    char *trimmed_name = strtok(name, " \t\r\n");
-    char *trimmed_expr = expr_part;
-    while (isspace((unsigned char)*trimmed_expr))
-      trimmed_expr++;
+      char k[64], right[4096];
+      *eq = 0;
+      strcpy(k, line);
+      strcpy(right, eq+1);
+      char *tk = strtok(k, " \t\r\n");
+      char *te = right;
+      while(isspace(*te)) te++;
 
-    VarValue v;
-    if (trimmed_expr[0] == '"') {
-      v.type = TYPE_STRING;
-      char *end_q = strrchr(trimmed_expr + 1, '"');
-      if (end_q)
-        *end_q = '\0';
-      v.value.s_val = strdup(trimmed_expr + 1);
-    } else {
-      char postfix[4096];
-      infix_to_postfix(trimmed_expr, postfix);
-      double result = evaluer(postfix);
+      Value val;
+      if (te[0] == '"') {
+          val.kind = T_STR;
+          char *eq2 = strrchr(te+1, '"');
+          if(eq2) *eq2=0;
+          val.val.s = strdup(te+1);
+      } else {
+          char pf[4096];
+          infix_to_postfix(te, pf);
+          double r = evaluate_postfix(pf);
+          if (strchr(te, '.')) {
+            val.kind = T_REAL; val.val.f = r;
+          } else {
+            val.kind = T_INT; val.val.i = (int)r;
+          }
+      }
 
-      if (strchr(trimmed_expr, '.'))
-        v.type = TYPE_REAL;
-      else
-        v.type = TYPE_INT;
-      if (v.type == TYPE_INT)
-        v.value.i_val = (int)result;
-      else
-        v.value.r_val = result;
-    }
-
-    if (set_variable(trimmed_name, v) == 0) {
-      printf("Variable %s définie avec la valeur ", trimmed_name);
-      if (v.type == TYPE_INT)
-        printf("%d (entier)\n", v.value.i_val);
-      else if (v.type == TYPE_REAL)
-        printf("%g (nombre réel)\n", v.value.r_val);
-      else if (v.type == TYPE_STRING)
-        printf("\"%s\" (chaîne de caractères)\n", v.value.s_val);
-    }
-    return;
-  }
-
-  traiter(commande);
-}
-
-void taiter(char *cmd, Commande *commandes, size_t nb_commandes, char *langue) {
-  (void)langue;
-  char commande_lower[1024];
-  strcpy(commande_lower, cmd);
-  stringToLower(commande_lower);
-
-  for (size_t i = 0; i < nb_commandes; i++) {
-    size_t len = strlen(commandes[i].name);
-    if (len == 0)
-      continue;
-
-    if (strncmp(commande_lower, commandes[i].name, len) == 0) {
-      char *lang = commandes[i].langue;
-      commandes[i].function(cmd, lang);
+      if (sym_put(tk, val) == 0) {
+          printf("Var %s set: ", tk);
+          if(val.kind==T_INT) printf("%d\n", val.val.i);
+          else if(val.kind==T_REAL) printf("%g\n", val.val.f);
+          else printf("'%s'\n", val.val.s);
+      }
       return;
-    }
   }
 
-  if (commande_lower[0] != '\0' &&
-      (isdigit((unsigned char)commande_lower[0]) || commande_lower[0] == '(' ||
-       strchr(commande_lower, '=') ||
-       isalpha((unsigned char)commande_lower[0]))) {
-    traiter_expression(cmd, "en");
-    return;
+  process_infix(line);
+}
+
+void run_cmd(char *raw, Cfg *list, size_t n, char *ln) {
+  char buf[1024];
+  strcpy(buf, raw);
+  to_low(buf);
+
+  for(size_t i=0; i<n; i++) {
+     size_t l = strlen(list[i].k);
+     if(!l) continue;
+     if(strncmp(buf, list[i].k, l)==0) {
+         list[i].fn(raw, list[i].l);
+         return;
+     }
   }
 
-  printf("Cette commande n'existe pas : %s\n", cmd);
-}
-
-void afficher_message(char *fr, char *en, char *langue) {
-  printf("%s", strcmp(langue, "fr") == 0 ? fr : en);
-}
-
-void afficher_version(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Version actuelle de l'interpréteur : \n",
-                   "Actual interpretor version: \n", langue);
-  printf("GCC %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-}
-
-void traiter_quit(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Arrêt...\n", "Stopping...\n", langue);
-  programme_fini = 0;
-}
-
-void traiter_echo(char *arg, char *langue) {
-  afficher_message("Affichage : ", "Echo : ", langue);
-  int i = strcmp(langue, "fr") == 0 ? 9 : 5;
-  for (; arg[i] != '\0'; i++) {
-    printf("%c", arg[i]);
+  char c = buf[0];
+  if (c && (isdigit(c) || c=='(' || strchr(buf,'=') || isalpha(c))) {
+      handle_logic(raw, "en");
+      return;
   }
-  printf("\n"); // Saut de ligne après la sortie
+
+  printf("Unknown: %s\n", raw);
 }
 
-void date(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Date du jour :\n", "Today date: \n", langue);
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-  printf("now: %d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900, tm.tm_mon + 1,
-         tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-}
+void msg(char *f, char *e, char *l) { printf("%s", strcmp(l,"fr")==0?f:e); }
 
-void afficher_aide(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Commandes disponibles : \n", "Available commands: \n",
-                   langue);
-  for (size_t i = 0; i < nb_commande; i++) {
-    printf("Commande : %s \n", commandes[i].name);
-  }
-}
+void f_ver(char *a, char *l) { msg("Version:\n", "Version:\n", l); printf("GCC %d\n", __GNUC__); }
+void f_xit(char *a, char *l) { msg("Fin.\n", "End.\n", l); keep_running = 0; }
+void f_ech(char *a, char *l) { msg("Echo: ", "Echo: ", l); printf("%s\n", a + (strcmp(l,"fr")==0?9:5)); }
+void f_dat(char *a, char *l) { time_t t=time(0); printf("%s", ctime(&t)); }
+void f_hlp(char *a, char *l) { printf("Help:\n"); for(size_t i=0;i<n_cmds;i++) printf("%s\n", cmds[i].k); }
 
 int main() {
-  init_symbols();
-  while (programme_fini) {
-    printf("> ");
-
-    // Buffer pour stocker la commande utilisateur
-    char commande[1024];
-
-    if (fgets(commande, sizeof(commande), stdin) == NULL) {
-      break;
-    }
-
-    // Enlève le caractère de fin de ligne ajouté par fgets
-    commande[strcspn(commande, "\n")] = 0;
-    if (commande[0] == '\0') {
-      continue;
-    }
-
-    taiter(commande, commandes, nb_commande, NULL);
-
+  sym_init();
+  char buf[1024];
+  while(keep_running) {
+    printf("TP5> ");
+    if(!fgets(buf, 1024, stdin)) break;
+    buf[strcspn(buf, "\n")] = 0;
+    if(!*buf) continue;
+    run_cmd(buf, cmds, n_cmds, NULL);
     printf("\n");
   }
-
   return 0;
 }
-
-/*
-    Questions à réfléchir
-
-    - Commande echo avec arguments
-    -> Il affiche les arguments avec le echo
-
-    - Ajouter des nouvelles commandes
-    -> Pour le moment en rajoutant des else if
-*/

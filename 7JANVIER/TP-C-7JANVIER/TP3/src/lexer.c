@@ -4,88 +4,86 @@
 #include <stdlib.h>
 #include <string.h>
 
-void skip_whitespace(const char **input) {
-  if (input == NULL || *input == NULL)
-    return;
-  while (isspace((unsigned char)**input)) {
-    (*input)++;
+// Avance le pointeur tant qu'il y a des espaces
+void pass_spaces(const char **ptr) {
+  if (!ptr || !*ptr) return;
+  while (isspace((unsigned char)**ptr)) {
+    (*ptr)++;
   }
 }
 
-Token get_number(const char **input) {
-  Token token;
-  token.type = TOKEN_NUMBER;
-  int index = 0;
-  const int maxlen = (int)sizeof(token.value) - 1;
-  int dot_count = 0;
+Token extract_num(const char **ptr) {
+  Token tok;
+  tok.type = TOKEN_NUMBER;
+  int i = 0;
+  int dot = 0;
+  const int limit = (int)sizeof(tok.value) - 1;
 
-  if (input == NULL || *input == NULL) {
-    token.type = TOKEN_UNKNOWN;
-    token.value[0] = '\0';
-    return token;
+  if (!ptr || !*ptr) {
+    tok.type = TOKEN_UNKNOWN;
+    tok.value[0] = 0;
+    return tok;
   }
 
-  while ((**input != '\0') &&
-         (isdigit((unsigned char)**input) || **input == '.')) {
-    if (**input == '.') {
-      dot_count++;
-      if (dot_count > 1)
-        break; // nombre invalide avec plusieurs points
+  // Boucle de lecture
+  for (; **ptr != '\0'; (*ptr)++) {
+    char c = **ptr;
+    if (!isdigit((unsigned char)c) && c != '.') break;
+
+    if (c == '.') {
+      dot++;
+      if (dot > 1) break; // Trop de points
     }
-    if (index < maxlen) {
-      token.value[index++] = **input;
+
+    if (i < limit) {
+      tok.value[i++] = c;
     }
-    (*input)++;
   }
-  token.value[index] = '\0';
-  return token;
+  tok.value[i] = '\0';
+  return tok;
 }
 
-Token get_operator(const char **input) {
-  Token token;
-  token.type = TOKEN_OPERATOR;
-  token.value[0] = '\0';
-  if (input == NULL || *input == NULL || **input == '\0') {
-    token.type = TOKEN_UNKNOWN;
-    return token;
+Token extract_op(const char **ptr) {
+  Token tok;
+  tok.type = TOKEN_OPERATOR;
+  tok.value[0] = 0;
+
+  if (!ptr || !*ptr || !**ptr) {
+    tok.type = TOKEN_UNKNOWN;
+    return tok;
   }
-  token.value[0] = **input;
-  token.value[1] = '\0';
-  (*input)++;
-  return token;
+  
+  // Prise de l'opérateur
+  tok.value[0] = **ptr;
+  tok.value[1] = 0;
+  (*ptr)++; // Avance
+  return tok;
 }
 
-// Fonction principale pour tokeniser l'entrée
 int tokenize(const char *input, Token *output) {
-  const char *current = input;
-  int token_count = 0;
+  const char *cursor = input;
+  int nb_tok = 0;
 
-  while (*current != '\0') { // Tant qu'on n'a pas atteint la fin de la chaîne
-    skip_whitespace(&current);
+  while (*cursor) {
+    pass_spaces(&cursor);
+    if (!*cursor) break;
 
-    if (*current == '\0')
-      break;
-
-    if (isdigit((unsigned char)*current) || *current == '.') {
-      // Tokeniser un nombre
-      output[token_count++] = get_number(&current);
-    } else if (*current == '+' || *current == '-' || *current == '*' ||
-               *current == '/') {
-      // Tokeniser un opérateur
-      output[token_count++] = get_operator(&current);
+    char c = *cursor;
+    if (isdigit((unsigned char)c) || c == '.') {
+      output[nb_tok++] = extract_num(&cursor);
+    } else if (strchr("+-*/", c)) {
+      output[nb_tok++] = extract_op(&cursor);
     } else {
-      // Gérer les erreurs de syntaxe (caractère inconnu)
-      fprintf(stderr, "Unknown token: %c\n", *current);
-      current++;
+      fprintf(stderr, "Erreur lexicale: '%c' inconnu\n", c);
+      cursor++;
     }
   }
 
-  // Ajouter un token de fin de fichier (EOF)
-  Token eof_token;
-  eof_token.type = TOKEN_EOF;
-  strcpy(eof_token.value, "EOF");
-  output[token_count++] = eof_token;
+  // Fin de flux
+  Token end;
+  end.type = TOKEN_EOF;
+  strcpy(end.value, "EOF");
+  output[nb_tok++] = end;
 
-  // Retourner le nombre de tokens
-  return token_count;
+  return nb_tok;
 }

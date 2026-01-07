@@ -5,31 +5,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_VAR_NAME 64
-#define MAX_SYMBOLS 100
+#define VAR_MAX 64
+#define TBL_MAX 100
 
-typedef enum { TYPE_INT, TYPE_REAL, TYPE_STRING } VarType;
+typedef enum { T_INT, T_REAL, T_STR } ValType;
 
 typedef struct {
-  VarType type;
+  ValType kind;
   union {
-    int i_val;
-    double r_val;
-    char *s_val;
-  } value;
-} VarValue;
+    int i;
+    double f;
+    char *s;
+  } val;
+} Value;
 
 typedef struct {
-  char name[MAX_VAR_NAME];
-  VarValue val;
-  int is_defined;
-} Symbol;
+  char id[VAR_MAX];
+  Value v;
+  int used;
+} Entry;
 
-extern Symbol symbol_table[MAX_SYMBOLS];
-
-void init_symbols();
-int set_variable(const char *name, VarValue val);
-int get_variable(const char *name, VarValue *out_val);
-void print_variable(const char *name);
+void sym_init();
+int sym_put(const char *key, Value val);
+int sym_get(const char *key, Value *out);
+void sym_print(const char *key);
 
 #endif

@@ -6,208 +6,120 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_SIZE 256
+#define SZ 256
 
-typedef struct {
-  char data[MAX_SIZE];
-  int top;
-} CharStack;
+typedef struct { char d[SZ]; int n; } SChar;
+typedef struct { double d[SZ]; int n; } SNum;
 
-typedef struct {
-  double data[MAX_SIZE];
-  int top;
-} DoubleStack;
+void sc_init(SChar *s) { s->n = -1; }
+void sc_push(SChar *s, char c) { if(s->n < SZ-1) s->d[++s->n] = c; }
+char sc_pop(SChar *s) { return (s->n >= 0) ? s->d[s->n--] : 0; }
+char sc_peek(SChar *s) { return (s->n >= 0) ? s->d[s->n] : 0; }
+int sc_empty(SChar *s) { return s->n == -1; }
 
-void init_char(CharStack *s) { s->top = -1; }
-void push_char(CharStack *s, char c) {
-  if (s->top < MAX_SIZE - 1) {
-    s->data[++(s->top)] = c;
-  } else {
-    fprintf(stderr, "Erreur: Débordement de pile (CharStack overflow)\n");
-  }
-}
-char pop_char(CharStack *s) {
-  if (s->top >= 0) {
-    return s->data[(s->top)--];
-  }
-  fprintf(stderr, "Erreur: Pile vide (CharStack underflow)\n");
-  return '\0';
-}
-char peek_char(CharStack *s) {
-  if (s->top >= 0) {
-    return s->data[s->top];
-  }
-  return '\0';
-}
-int is_empty_char(CharStack *s) { return s->top == -1; }
+void sn_init(SNum *s) { s->n = -1; }
+void sn_push(SNum *s, double v) { if(s->n < SZ-1) s->d[++s->n] = v; }
+double sn_pop(SNum *s) { return (s->n >= 0) ? s->d[s->n--] : 0; }
 
-void init_double(DoubleStack *s) { s->top = -1; }
-void push_double(DoubleStack *s, double v) {
-  if (s->top < MAX_SIZE - 1) {
-    s->data[++(s->top)] = v;
-  } else {
-    fprintf(stderr, "Erreur: Débordement de pile (DoubleStack overflow)\n");
-  }
-}
-double pop_double(DoubleStack *s) {
-  if (s->top >= 0) {
-    return s->data[(s->top)--];
-  }
-  fprintf(stderr, "Erreur: Pile vide (DoubleStack underflow)\n");
+int get_p(char c) {
+  if (strchr("*/%", c)) return 2;
+  if (strchr("+-", c)) return 1;
   return 0;
 }
+int is_o(char c) { return strchr("+-*/%", c) != NULL; }
 
-int precedence(char op) {
-  if (op == '+' || op == '-')
-    return 1;
-  if (op == '*' || op == '/' || op == '%')
-    return 2;
-  return 0;
-}
-
-int is_operator(char c) { return strchr("+-*/%", c) != NULL; }
-
-void normalize(const char *in, char *out) {
-  int j = 0;
+void norm_str(const char *in, char *out) {
+  int x = 0;
   for (int i = 0; in[i]; i++) {
-    if (strchr("+-*/%()", in[i])) {
-      out[j++] = ' ';
-      out[j++] = in[i];
-      out[j++] = ' ';
+    char c = in[i];
+    if (is_o(c) || c=='(' || c==')') {
+      out[x++]=' '; out[x++]=c; out[x++]=' ';
     } else {
-      out[j++] = in[i];
+      out[x++]=c;
     }
   }
-  out[j] = '\0';
+  out[x]=0;
 }
 
-static int eval_error = 0;
+static int err = 0;
 
-double evaluer(char *postfix) {
-  eval_error = 0;
-  DoubleStack pile;
-  init_double(&pile);
+double evaluate_postfix(char *postfix) {
+  err = 0;
+  SNum s;
+  sn_init(&s);
+  char tmp[4096];
+  strcpy(tmp, postfix);
+  char *tok = strtok(tmp, " ");
 
-  char temp[4096];
-  strcpy(temp, postfix);
-  char *token = strtok(temp, " ");
-
-  while (token) {
-    if (isdigit(token[0]) || (token[0] == '-' && isdigit(token[1]))) {
-      push_double(&pile, atof(token));
-    } else if (is_operator(token[0]) && strlen(token) == 1) {
-      if (pile.top < 1) {
-        fprintf(stderr, "Erreur : Expression mal formée\n");
-        eval_error = 1;
-        return 0;
-      }
-      double b = pop_double(&pile);
-      double a = pop_double(&pile);
-      switch (token[0]) {
-      case '+':
-        push_double(&pile, a + b);
-        break;
-      case '-':
-        push_double(&pile, a - b);
-        break;
-      case '*':
-        push_double(&pile, a * b);
-        break;
-      case '/':
-        if (b == 0) {
-          fprintf(stderr, "Erreur : division par zéro\n");
-          eval_error = 1;
-          push_double(&pile, 0);
-        } else
-          push_double(&pile, a / b);
-        break;
-      case '%':
-        push_double(&pile, fmod(a, b));
-        break;
+  while (tok) {
+    if (isdigit(tok[0]) || (tok[0]=='-' && isdigit(tok[1]))) {
+      sn_push(&s, atof(tok));
+    } else if (is_o(tok[0]) && strlen(tok)==1) {
+      if (s.n < 1) { err=1; return 0; }
+      double b = sn_pop(&s);
+      double a = sn_pop(&s);
+      switch(tok[0]) {
+        case '+': sn_push(&s, a+b); break;
+        case '-': sn_push(&s, a-b); break;
+        case '*': sn_push(&s, a*b); break;
+        case '/': if(b==0) { err=1; sn_push(&s,0); } else sn_push(&s, a/b); break;
+        case '%': sn_push(&s, fmod(a,b)); break;
       }
     } else {
-      VarValue v;
-      if (get_variable(token, &v) == 0) {
-        if (v.type == TYPE_INT)
-          push_double(&pile, (double)v.value.i_val);
-        else if (v.type == TYPE_REAL)
-          push_double(&pile, v.value.r_val);
+      Value v;
+      if (sym_get(tok, &v) == 0) {
+        if(v.kind == T_INT) sn_push(&s, (double)v.val.i);
+        else if(v.kind == T_REAL) sn_push(&s, v.val.f);
       } else {
-        fprintf(stderr, "Erreur : variable non définie %s\n", token);
-        eval_error = 1;
-        push_double(&pile, 0);
+        // Ignorer ou erreur? "variable non définie"
+        err = 1; sn_push(&s, 0);
       }
     }
-    token = strtok(NULL, " ");
+    tok = strtok(NULL, " ");
   }
-  if (pile.top != 0) {
-    eval_error = 1;
-  }
-  return (pile.top == 0) ? pop_double(&pile) : 0;
+  return (s.n == 0) ? sn_pop(&s) : 0;
 }
 
-void infix_to_postfix(const char *input, char *output) {
-  char normalized[8192];
-  normalize(input, normalized);
-
-  CharStack pile;
-  init_char(&pile);
-
-  output[0] = '\0';
-  char *temp_norm = strdup(normalized);
-  if (temp_norm == NULL) {
-    fprintf(stderr, "Memory allocation failed in infix_to_postfix\n");
-    return;
-  }
-  char *token = strtok(temp_norm, " ");
-
-  while (token) {
-    if (isdigit(token[0]) || (token[0] == '-' && isdigit(token[1]))) {
-      strcat(output, token);
-      strcat(output, " ");
-    } else if (token[0] == '(') {
-      push_char(&pile, '(');
-    } else if (token[0] == ')') {
-      while (!is_empty_char(&pile) && peek_char(&pile) != '(') {
-        int len = strlen(output);
-        output[len] = pop_char(&pile);
-        output[len + 1] = ' ';
-        output[len + 2] = '\0';
+void infix_to_postfix(const char *in, char *out) {
+  char n[8192];
+  norm_str(in, n);
+  SChar s;
+  sc_init(&s);
+  out[0] = 0;
+  
+  char *d = strdup(n);
+  char *t = strtok(d, " ");
+  while(t) {
+    if (isdigit(t[0]) || (t[0]=='-' && isdigit(t[1]))) {
+      strcat(out, t); strcat(out, " ");
+    } else if (t[0]=='(') {
+      sc_push(&s, '(');
+    } else if (t[0]==')') {
+      while(!sc_empty(&s) && sc_peek(&s)!='(') {
+        int l=strlen(out); out[l]=sc_pop(&s); out[l+1]=' '; out[l+2]=0;
       }
-      pop_char(&pile); // Enlever '('
-    } else if (is_operator(token[0])) {
-      while (!is_empty_char(&pile) && peek_char(&pile) != '(' &&
-             precedence(peek_char(&pile)) >= precedence(token[0])) {
-        int len = strlen(output);
-        output[len] = pop_char(&pile);
-        output[len + 1] = ' ';
-        output[len + 2] = '\0';
+      sc_pop(&s);
+    } else if (is_o(t[0])) {
+      while(!sc_empty(&s) && sc_peek(&s)!='(' && get_p(sc_peek(&s)) >= get_p(t[0])) {
+        int l=strlen(out); out[l]=sc_pop(&s); out[l+1]=' '; out[l+2]=0;
       }
-      push_char(&pile, token[0]);
-    } else if (token[0] != '(' && token[0] != ')') {
-      // Variable (supports UTF-8 as it's not a digit/op/paren)
-      strcat(output, token);
-      strcat(output, " ");
+      sc_push(&s, t[0]);
+    } else if (t[0]!='(' && t[0]!=')') {
+      strcat(out, t); strcat(out, " ");
     }
-    token = strtok(NULL, " ");
+    t = strtok(NULL, " ");
   }
-
-  while (!is_empty_char(&pile)) {
-    int len = strlen(output);
-    output[len] = pop_char(&pile);
-    output[len + 1] = ' ';
-    output[len + 2] = '\0';
+  while(!sc_empty(&s)) {
+    int l=strlen(out); out[l]=sc_pop(&s); out[l+1]=' '; out[l+2]=0;
   }
-  free(temp_norm);
+  free(d);
 }
 
-void traiter(char *input) {
-  char output[4096];
-  infix_to_postfix(input, output);
-  if (strlen(output) > 0) {
-    double res = evaluer(output);
-    if (!eval_error) {
-      printf("%g\n", res);
-    }
+void process_infix(char *input) {
+  char buf[4096];
+  infix_to_postfix(input, buf);
+  if (strlen(buf)>0) {
+    double r = evaluate_postfix(buf);
+    if (!err) printf("%g\n", r);
   }
 }

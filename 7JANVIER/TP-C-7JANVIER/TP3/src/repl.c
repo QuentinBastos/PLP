@@ -7,157 +7,120 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#define MAX_COMMANDS_SIZE 100
 
 typedef struct {
-  char name[64];
-  void (*function)(char *arg, char *langue);
-  char langue[3];
-  bool arg;
-} Commande;
+  char key[64];
+  void (*handler)(char *args, char *lang);
+  char lang[4];
+  bool has_arg;
+} Cmd;
 
-void afficher_version(char *arg, char *langue);
-void afficher_aide(char *arg, char *langue);
-void traiter_quit(char *arg, char *langue);
-void traiter_echo(char *arg, char *langue);
-void date(char *arg, char *langue);
-void afficher_message(char *fr, char *en, char *langue);
+// Prototypes
+void cmd_version(char *a, char *l);
+void cmd_help(char *a, char *l);
+void cmd_exit(char *a, char *l);
+void cmd_echo(char *a, char *l);
+void cmd_date(char *a, char *l);
 
-Commande commandes[] = {{"version", afficher_version, "fr", false},
-                        {"aide", afficher_aide, "fr", false},
-                        {"help", afficher_aide, "en", false},
-                        {"quitter", traiter_quit, "fr", false},
-                        {"quit", traiter_quit, "en", false},
-                        {"afficher ", traiter_echo, "fr", true},
-                        {"echo ", traiter_echo, "en", true},
-                        {"date", date, "fr", false},
-                        {"now", date, "en", false}};
+// Liste des commandes
+Cmd liste_cmd[] = {
+    {"version", cmd_version, "fr", false},
+    {"aide", cmd_help, "fr", false},
+    {"help", cmd_help, "en", false},
+    {"quitter", cmd_exit, "fr", false},
+    {"quit", cmd_exit, "en", false},
+    {"afficher ", cmd_echo, "fr", true},
+    {"echo ", cmd_echo, "en", true},
+    {"date", cmd_date, "fr", false},
+    {"now", cmd_date, "en", false}
+};
+size_t nb_cmds = sizeof(liste_cmd) / sizeof(Cmd);
+int running = 1;
 
-size_t nb_commande = sizeof(commandes) / sizeof(commandes[0]);
-int programme_fini = 1;
-
-void stringToLower(char *str) {
-  for (int i = 0; str[i]; i++) {
-    str[i] = tolower((unsigned char)str[i]);
-  }
+void to_lower_case(char *s) {
+  for (; *s; ++s) *s = tolower((unsigned char)*s);
 }
 
-void traiter_expression(char *commande, char *lang) {
-  Token *tokens = (Token *)malloc(64 * sizeof(Token));
-  int token_count = tokenize(commande, tokens);
+void process_expr(char *input, char *l) {
+  // Alloue dynamiquement le buffer de tokens
+  Token *toks = calloc(64, sizeof(Token));
+  if (!toks) return;
 
-  ASTNode *ast = parse_tokens(tokens, token_count);
-  double result = evaluate_expression(ast);
+  int count = tokenize(input, toks);
+  ASTNode *root = parse_tokens(toks, count);
+  double res = evaluate_expression(root);
 
-  afficher_message("Résultats : ", "Results : ", lang);
-  printf("%g\n", result);
+  if (strcmp(l, "fr") == 0) printf("Résultat : %g\n", res);
+  else printf("Result : %g\n", res);
 
-  free(tokens);
-  free_ast(ast);
+  free(toks);
+  free_ast(root);
 }
 
-void taiter(char *cmd, Commande *commandes, size_t nb_commandes, char *langue) {
-  (void)langue;
-  char commande_lower[1024];
-  strcpy(commande_lower, cmd);
-  stringToLower(commande_lower);
+void dispatch(char *raw_cmd, Cmd *params, size_t n, char *def_lang) {
+  char buffer[1024];
+  strcpy(buffer, raw_cmd);
+  to_lower_case(buffer);
 
-  for (size_t i = 0; i < nb_commandes; i++) {
-    size_t len = strlen(commandes[i].name);
-    if (len == 0)
-      continue;
+  for (size_t i = 0; i < n; i++) {
+    size_t sz = strlen(params[i].key);
+    if (!sz) continue;
 
-    if (strncmp(commande_lower, commandes[i].name, len) == 0) {
-      char *lang = commandes[i].langue;
-      commandes[i].function(cmd, lang);
+    if (strncmp(buffer, params[i].key, sz) == 0) {
+      params[i].handler(raw_cmd, params[i].lang);
       return;
     }
   }
 
-  if (commande_lower[0] != '\0' &&
-      (isdigit((unsigned char)commande_lower[0]) || commande_lower[0] == '(')) {
-    traiter_expression(cmd, "en");
+  char *p = buffer;
+  while(isspace((unsigned char)*p)) p++;
+
+  // Si pas de commande, peut-être une expression ?
+  if (*p && (isdigit((unsigned char)*p) || *p == '(')) {
+    process_expr(raw_cmd, "fr"); // Default to FR for TP3
     return;
   }
 
-  printf("Cette commande n'existe pas : %s\n", cmd);
+  printf("Commande inconnue : %s\n", raw_cmd);
 }
 
-void afficher_message(char *fr, char *en, char *langue) {
-  printf("%s", strcmp(langue, "fr") == 0 ? fr : en);
+void cmd_version(char *a, char *l) {
+  printf("Ver: %s (GCC %d.%d)\n", strcmp(l,"fr")==0 ? "TP3" : "TP3-EN", __GNUC__, __GNUC_MINOR__);
 }
 
-void afficher_version(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Version actuelle de l'interpréteur : \n",
-                   "Actual interpretor version: \n", langue);
-  printf("GCC %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
-}
-
-void traiter_quit(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Arrêt...\n", "Stopping...\n", langue);
-  programme_fini = 0;
-}
-
-void traiter_echo(char *arg, char *langue) {
-  afficher_message("Affichage : ", "Echo : ", langue);
-  int i = strcmp(langue, "fr") == 0 ? 9 : 5;
-  for (; arg[i] != '\0'; i++) {
-    printf("%c", arg[i]);
-  }
-  printf("\n"); // Saut de ligne après la sortie
-}
-
-void date(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Date du jour :\n", "Today date: \n", langue);
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-  printf("now: %d-%02d-%02d %02d:%02d:%02d\n", tm.tm_year + 1900, tm.tm_mon + 1,
-         tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-}
-
-void afficher_aide(char *arg, char *langue) {
-  (void)arg;
-  afficher_message("Commandes disponibles : \n", "Available commands: \n",
-                   langue);
-  for (size_t i = 0; i < nb_commande; i++) {
-    printf("Commande : %s \n", commandes[i].name);
+void cmd_help(char *a, char *l) {
+  printf("%s:\n", strcmp(l,"fr")==0 ? "Aide" : "Help");
+  for(size_t i=0; i<nb_cmds; i++) {
+    printf("- %s\n", liste_cmd[i].key);
   }
 }
 
-int main() {
-  while (programme_fini) {
-    printf("> ");
+void cmd_exit(char *a, char *l) {
+  printf("%s\n", strcmp(l,"fr")==0 ? "Bye." : "Exit.");
+  running = 0;
+}
 
-    // Buffer pour stocker la commande utilisateur
-    char commande[1024];
+void cmd_echo(char *a, char *l) {
+  int offset = (strcmp(l,"fr")==0) ? 9 : 5;
+  printf("ECHO: %s\n", a + offset);
+}
 
-    if (fgets(commande, sizeof(commande), stdin) == NULL) {
-      break;
-    }
+void cmd_date(char *a, char *l) {
+  time_t t = time(0);
+  struct tm *now = localtime(&t);
+  printf("%02d/%02d/%d %02d:%02d\n", now->tm_mday, now->tm_mon+1, now->tm_year+1900, 
+         now->tm_hour, now->tm_min);
+}
 
-    // Enlève le caractère de fin de ligne ajouté par fgets
-    commande[strcspn(commande, "\n")] = 0;
-    if (commande[0] == '\0') {
-      continue;
-    }
+int main(void) {
+  char buf[1024];
+  while(running) {
+    printf("TP3> ");
+    if(!fgets(buf, sizeof(buf), stdin)) break;
+    buf[strcspn(buf, "\n")] = 0; // Strip newline
+    if(!*buf) continue;
 
-    taiter(commande, commandes, nb_commande, NULL);
-
-    printf("\n");
+    dispatch(buf, liste_cmd, nb_cmds, NULL);
   }
-
   return 0;
 }
-
-/*
-    Questions à réfléchir
-
-    - Commande echo avec arguments
-    -> Il affiche les arguments avec le echo
-
-    - Ajouter des nouvelles commandes
-    -> Pour le moment en rajoutant des else if
-*/

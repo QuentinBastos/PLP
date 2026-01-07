@@ -1,91 +1,42 @@
 #include "lexer.h"
 #include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-void skip_whitespace(const char **input) {
-  if (input == NULL || *input == NULL)
-    return;
-  while (isspace((unsigned char)**input)) {
-    (*input)++;
-  }
+void pass_spaces(const char **p) {
+  if (!p || !*p) return;
+  while (isspace(**p)) (*p)++;
 }
 
-Token get_number(const char **input) {
-  Token token;
-  token.type = TOKEN_NUMBER;
-  int index = 0;
-  const int maxlen = (int)sizeof(token.value) - 1;
-  int dot_count = 0;
-
-  if (input == NULL || *input == NULL) {
-    token.type = TOKEN_UNKNOWN;
-    token.value[0] = '\0';
-    return token;
+Token extract_num(const char **p) {
+  Token t; t.type = TOKEN_NUMBER;
+  int i=0;
+  for(;**p;(*p)++) {
+      if(!isdigit(**p) && **p!='.') break;
+      if(i<63) t.value[i++]=**p;
   }
-
-  while ((**input != '\0') &&
-         (isdigit((unsigned char)**input) || **input == '.')) {
-    if (**input == '.') {
-      dot_count++;
-      if (dot_count > 1)
-        break; // nombre invalide avec plusieurs points
-    }
-    if (index < maxlen) {
-      token.value[index++] = **input;
-    }
-    (*input)++;
-  }
-  token.value[index] = '\0';
-  return token;
+  t.value[i]=0;
+  return t;
 }
 
-Token get_operator(const char **input) {
-  Token token;
-  token.type = TOKEN_OPERATOR;
-  token.value[0] = '\0';
-  if (input == NULL || *input == NULL || **input == '\0') {
-    token.type = TOKEN_UNKNOWN;
-    return token;
-  }
-  token.value[0] = **input;
-  token.value[1] = '\0';
-  (*input)++;
-  return token;
+Token extract_op(const char **p) {
+  Token t; t.type = TOKEN_OPERATOR;
+  t.value[0]=**p; t.value[1]=0;
+  (*p)++;
+  return t;
 }
 
-// Fonction principale pour tokeniser l'entrée
-int tokenize(const char *input, Token *output) {
-  const char *current = input;
-  int token_count = 0;
-
-  while (*current != '\0') { // Tant qu'on n'a pas atteint la fin de la chaîne
-    skip_whitespace(&current);
-
-    if (*current == '\0')
-      break;
-
-    if (isdigit((unsigned char)*current) || *current == '.') {
-      // Tokeniser un nombre
-      output[token_count++] = get_number(&current);
-    } else if (*current == '+' || *current == '-' || *current == '*' ||
-               *current == '/') {
-      // Tokeniser un opérateur
-      output[token_count++] = get_operator(&current);
-    } else {
-      // Gérer les erreurs de syntaxe (caractère inconnu)
-      fprintf(stderr, "Unknown token: %c\n", *current);
-      current++;
-    }
+int tokenize(const char *in, Token *out) {
+  const char *cur = in;
+  int n = 0;
+  while (*cur) {
+      pass_spaces(&cur);
+      if(!*cur) break;
+      if(isdigit(*cur) || *cur=='.') out[n++] = extract_num(&cur);
+      else if (strchr("+-*/", *cur)) out[n++] = extract_op(&cur);
+      else cur++;
   }
-
-  // Ajouter un token de fin de fichier (EOF)
-  Token eof_token;
-  eof_token.type = TOKEN_EOF;
-  strcpy(eof_token.value, "EOF");
-  output[token_count++] = eof_token;
-
-  // Retourner le nombre de tokens
-  return token_count;
+  Token end = { TOKEN_EOF, "EOF" };
+  out[n++] = end;
+  return n;
 }

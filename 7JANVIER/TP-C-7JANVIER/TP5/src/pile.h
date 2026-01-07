@@ -1,8 +1,8 @@
 #ifndef PILE_H
 #define PILE_H
 
-void traiter(char *input);
-double evaluer(char *postfix);
-void infix_to_postfix(const char *input, char *output);
+void infix_to_postfix(const char *in, char *out);
+double evaluate_postfix(char *postfix);
+void process_infix(char *input); // renamed from traiter
 
 #endif

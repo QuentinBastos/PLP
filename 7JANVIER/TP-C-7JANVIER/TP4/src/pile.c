@@ -4,174 +4,128 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_SIZE 256
+#define SZ 256
 
 typedef struct {
-  char data[MAX_SIZE];
-  int top;
-} CharStack;
+  char items[SZ];
+  int idx;
+} StackChar;
 
 typedef struct {
-  int data[MAX_SIZE];
-  int top;
-} IntStack;
+  int items[SZ];
+  int idx;
+} StackInt;
 
-void init_char(CharStack *s) { s->top = -1; }
-void push_char(CharStack *s, char c) {
-  if (s->top < MAX_SIZE - 1) {
-    s->data[++(s->top)] = c;
-  } else {
-    fprintf(stderr, "Erreur: Débordement de pile (CharStack overflow)\n");
-  }
+// --- Char Stack ---
+void s_char_init(StackChar *s) { s->idx = -1; }
+void s_char_add(StackChar *s, char c) {
+  if (s->idx < SZ - 1) s->items[++s->idx] = c;
 }
-char pop_char(CharStack *s) {
-  if (s->top >= 0) {
-    return s->data[(s->top)--];
-  }
-  fprintf(stderr, "Erreur: Pile vide (CharStack underflow)\n");
-  return '\0';
+char s_char_pop(StackChar *s) {
+  return (s->idx >= 0) ? s->items[s->idx--] : 0;
 }
-char peek_char(CharStack *s) {
-  if (s->top >= 0) {
-    return s->data[s->top];
-  }
-  return '\0';
+char s_char_peek(StackChar *s) {
+  return (s->idx >= 0) ? s->items[s->idx] : 0;
 }
-int is_empty_char(CharStack *s) { return s->top == -1; }
+int s_char_empty(StackChar *s) { return s->idx == -1; }
 
-void init_int(IntStack *s) { s->top = -1; }
-void push_int(IntStack *s, int v) {
-  if (s->top < MAX_SIZE - 1) {
-    s->data[++(s->top)] = v;
-  } else {
-    fprintf(stderr, "Erreur: Débordement de pile (IntStack overflow)\n");
-  }
+// --- Int Stack ---
+void s_int_init(StackInt *s) { s->idx = -1; }
+void s_int_add(StackInt *s, int v) {
+  if (s->idx < SZ - 1) s->items[++s->idx] = v;
 }
-int pop_int(IntStack *s) {
-  if (s->top >= 0) {
-    return s->data[(s->top)--];
-  }
-  fprintf(stderr, "Erreur: Pile vide (IntStack underflow)\n");
+int s_int_pop(StackInt *s) {
+  return (s->idx >= 0) ? s->items[s->idx--] : 0;
+}
+
+// --- Utils ---
+int get_prec(char c) {
+  if (c == '*' || c == '/' || c == '%') return 2;
+  if (c == '+' || c == '-') return 1;
   return 0;
 }
 
-int precedence(char op) {
-  if (op == '+' || op == '-')
-    return 1;
-  if (op == '*' || op == '/' || op == '%')
-    return 2;
-  return 0;
+int is_op(char c) {
+  return (c == '+' || c == '-' || c == '*' || c == '/' || c == '%');
 }
 
-int is_operator(char c) { return strchr("+-*/%", c) != NULL; }
-
-void normalize(const char *in, char *out) {
+void clean_str(const char *src, char *dst) {
   int j = 0;
-  for (int i = 0; in[i]; i++) {
-    if (strchr("+-*/%()", in[i])) {
-      out[j++] = ' ';
-      out[j++] = in[i];
-      out[j++] = ' ';
+  for (int i = 0; src[i]; i++) {
+    char c = src[i];
+    if (is_op(c) || c == '(' || c == ')') {
+      dst[j++] = ' '; dst[j++] = c; dst[j++] = ' ';
     } else {
-      out[j++] = in[i];
+      dst[j++] = c;
     }
   }
-  out[j] = '\0';
+  dst[j] = 0;
 }
 
-int evaluer(char *postfix) {
-  IntStack pile;
-  init_int(&pile);
+// --- Logic ---
+int compute_postfix(char *expr) {
+  StackInt s;
+  s_int_init(&s);
+  char buf[4096];
+  strcpy(buf, expr);
+  char *tok = strtok(buf, " ");
 
-  char temp[4096];
-  strcpy(temp, postfix);
-  char *token = strtok(temp, " ");
-
-  while (token) {
-    if (isdigit(token[0]) || (token[0] == '-' && isdigit(token[1]))) {
-      push_int(&pile, atoi(token));
-    } else if (is_operator(token[0])) {
-      int b = pop_int(&pile);
-      int a = pop_int(&pile);
-      switch (token[0]) {
-      case '+':
-        push_int(&pile, a + b);
-        break;
-      case '-':
-        push_int(&pile, a - b);
-        break;
-      case '*':
-        push_int(&pile, a * b);
-        break;
-      case '/':
-        push_int(&pile, a / b);
-        break;
-      case '%':
-        push_int(&pile, a % b);
-        break;
+  while (tok) {
+    if (isdigit(tok[0]) || (tok[0] == '-' && isdigit(tok[1]))) {
+      s_int_add(&s, atoi(tok));
+    } else if (is_op(tok[0])) {
+      int v2 = s_int_pop(&s);
+      int v1 = s_int_pop(&s);
+      switch(tok[0]) {
+        case '+': s_int_add(&s, v1 + v2); break;
+        case '-': s_int_add(&s, v1 - v2); break;
+        case '*': s_int_add(&s, v1 * v2); break;
+        case '/': if(v2) s_int_add(&s, v1 / v2); break;
+        case '%': if(v2) s_int_add(&s, v1 % v2); break;
       }
     }
-    token = strtok(NULL, " ");
+    tok = strtok(NULL, " ");
   }
-  return pop_int(&pile);
+  return s_int_pop(&s);
 }
 
-void traiter(char *input) {
-  char normalized[8192];
-  normalize(input, normalized);
+void handle_infix_expr(char *raw) {
+  char clean[8192];
+  clean_str(raw, clean);
 
-  CharStack pile;
-  init_char(&pile);
+  StackChar s;
+  s_char_init(&s);
+  
+  char post[4096] = "";
+  char *tok = strtok(clean, " ");
 
-  char output[4096] = "";
-  char *token = strtok(normalized, " ");
-
-  while (token) {
-    if (isdigit(token[0])) {
-      strcat(output, token);
-      strcat(output, " ");
-    } else if (token[0] == '(') {
-      push_char(&pile, '(');
-    } else if (token[0] == ')') {
-      while (!is_empty_char(&pile) && peek_char(&pile) != '(') {
-        int len = strlen(output);
-        output[len] = pop_char(&pile);
-        output[len + 1] = ' ';
-        output[len + 2] = '\0';
+  while (tok) {
+    if (isdigit(tok[0])) {
+      strcat(post, tok); strcat(post, " ");
+    } else if (tok[0] == '(') {
+      s_char_add(&s, '(');
+    } else if (tok[0] == ')') {
+      while (!s_char_empty(&s) && s_char_peek(&s) != '(') {
+        int l = strlen(post);
+        post[l] = s_char_pop(&s); post[l+1] = ' '; post[l+2] = 0;
       }
-      pop_char(&pile); // Enlever '('
-    } else if (is_operator(token[0])) {
-      while (!is_empty_char(&pile) && peek_char(&pile) != '(' &&
-             precedence(peek_char(&pile)) >= precedence(token[0])) {
-        int len = strlen(output);
-        output[len] = pop_char(&pile);
-        output[len + 1] = ' ';
-        output[len + 2] = '\0';
+      s_char_pop(&s); // Remove (
+    } else if (is_op(tok[0])) {
+      while (!s_char_empty(&s) && s_char_peek(&s) != '(' &&
+             get_prec(s_char_peek(&s)) >= get_prec(tok[0])) {
+        int l = strlen(post);
+        post[l] = s_char_pop(&s); post[l+1] = ' '; post[l+2] = 0;
       }
-      push_char(&pile, token[0]);
+      s_char_add(&s, tok[0]);
     }
-    token = strtok(NULL, " ");
+    tok = strtok(NULL, " ");
   }
 
-  while (!is_empty_char(&pile)) {
-    int len = strlen(output);
-    output[len] = pop_char(&pile);
-    output[len + 1] = ' ';
-    output[len + 2] = '\0';
+  while (!s_char_empty(&s)) {
+    int l = strlen(post);
+    post[l] = s_char_pop(&s); post[l+1] = ' '; post[l+2] = 0;
   }
 
-  printf("Postfixe: %s\n", output);
-  printf("Résultat: %d\n", evaluer(output));
+  printf("Postfixe: %s\n", post);
+  printf("Résultat: %d\n", compute_postfix(post));
 }
-
-/*
-int main(void) {
-  char input[4096];
-  printf("Entrez une expression infixe : ");
-  if (fgets(input, sizeof(input), stdin)) {
-    input[strcspn(input, "\n")] = 0;
-    traiter(input);
-  }
-  return 0;
-}
-*/
